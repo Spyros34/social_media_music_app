@@ -10,9 +10,15 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Register any application services.
      */
+
+     protected $listen = [
+        \SocialiteProviders\Manager\SocialiteWasCalled::class => [
+            'SocialiteProviders\\Spotify\\SpotifyExtendSocialite@handle',
+        ],
+    ];
     public function register(): void
     {
-        //
+        
     }
 
     /**
