@@ -26,9 +26,12 @@
         "@mdi/font": "^7.4.47",
         "@splidejs/vue-splide": "^0.6.12",
         "@vitejs/plugin-vue": "^5.2.4",
+        "leader-line": "^1.0.8",
         "sass": "^1.89.0",
+        "v-tmline": "^1.5.0",
         "vue": "^3.5.14",
         "vue3-marquee": "^4.2.2",
+        "vue3-steps": "^0.1.3",
         "vuetify": "^3.8.0-beta.0",
         "ziggy-js": "^2.5.3"
     },

@@ -1,11 +1,6 @@
 <template>
 
-       <div class="flex items-center justify-between p-4 bg-white shadow">
-    <!-- LEFT: logo -->
-    <InertiaLink href="/login" class="flex items-center ">
-      <img src="/logo.svg" alt="Logo" class="h-8 w-8 mr-2" />
-
-    </InertiaLink>
+       <div class="flex items-center justify-between ">
 
   </div >
     <div class="flex-1  bg-gray-100 min-h-screen " >

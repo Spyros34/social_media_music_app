@@ -5,34 +5,37 @@
       style="min-height:100vh; "
     >
       <!-- Cover Carousel Card -->
-      <v-sheet
-        elevation="10"
-        rounded="lg"
-        class="d-flex flex-column align-center pa-6 mb-8"
-        style="width:380px; background: #FFFFFF; border-top: 4px solid #1DB954;"
-      >
+     
         <!-- Title -->
-        <v-fade-transition mode="in-out">
-          <h2
-            v-if="show"
-            class="text-h4 font-weight-medium mb-2 text-center"
-            style="color: #1DB954; font-family: 'Montserrat', sans-serif;"
-          >
-            Welcome to VibeWave
-          </h2>
-        </v-fade-transition>
+      <v-fade-transition mode="in-out">
+  <div class="flex items-center">
+      <!-- 1. Fixed-size wrapper -->
+      <div class="mr-2 h-32 w-32 flex-shrink-0">
+        <!-- 2. Fill the wrapper -->
+        <img
+          src="/logo.svg"
+          alt="Logo"
+          class="h-full w-full object-contain"
+        />
+      </div>
+    </div>
+</v-fade-transition>
 
-        <!-- Tagline -->
-        <v-fade-transition mode="in-out" delay="100">
-          <p
-            v-if="show"
-            class="subtitle-1 text-center mb-6"
-            style="color: #424242; max-width: 340px;"
-          >
-            Share the tracks you’re loving and let the community discover your vibe.
-          </p>
-        </v-fade-transition>
-
+<v-fade-transition mode="in-out" delay="100">
+  <div v-if="show" class="tagline-container text-center mb-6">
+    <p class="merriweather-tagline">
+      Share the tracks you’re loving and let the community discover your vibe.
+    </p>
+    <p class="with-line">
+      With <span class="vibewave-word">VibeWave</span>
+    </p>
+  </div>
+</v-fade-transition>
+ <v-sheet
+     rounded="md"
+  class="d-flex flex-column align-center pa-6 mb-8 mx-auto"
+  style="width: 100%; max-width: 480px; background: #FFFFFF; "
+>
         <!-- Carousel -->
       <Marquee
         v-if="show && covers.length"
@@ -55,60 +58,64 @@
       </Marquee>
 
         <!-- CTA -->
-        <v-scale-transition mode="in-out" delay="200">
-          <v-btn
-            v-if="show"
-            large
-            block
-            color="#1DB954"
-            class="white--text"
-            @click="goSpotify"
-            style="min-width:220px;"
-          >
-            <v-icon left>mdi-spotify</v-icon>
-            Continue with Spotify
-          </v-btn>
-        </v-scale-transition>
+       <v-scale-transition mode="in-out" delay="200">
+  <v-btn
+    v-if="show"
+    class="btn-spotify-circle mx-auto"
+    @click="goSpotify"
+    elevation="0"
+  >
+    Continue with <span class="spotify-word">Spotify</span>
+  </v-btn>
+</v-scale-transition>
       </v-sheet>
+ <div class="features-dropcap max-w-lg mx-auto my-12 space-y-8">
+      <div class="feature-row">
+        <span class="dropcap">P</span>
+        <div>
+          <h4 class="feature-title">Vibe Post</h4>
+          <p class="feature-desc">
+            Share your favorite tracks—upload a Spotify link, add a caption, and let everyone catch your vibe.
+          </p>
+        </div>
+      </div>
 
-      <!-- Features Card (Separate) -->
-      <v-sheet
-        elevation="2"
-        rounded="lg"
-        class="d-flex flex-column pa-4"
-        style="width:380px; background: #FFFFFF;"
-      >
-        <v-row dense justify="space-around">
-          <v-col cols="4" class="text-center">
-            <v-icon size="36" color="#1DB954">mdi-playlist-music</v-icon>
-            <p class="subtitle-2 font-weight-medium mt-2">Post Tracks</p>
-          </v-col>
-          <v-col cols="4" class="text-center">
-            <v-icon size="36" color="#1DB954">mdi-thumb-up-outline</v-icon>
-            <p class="subtitle-2 font-weight-medium mt-2">Like & React</p>
-          </v-col>
-          <v-col cols="4" class="text-center">
-            <v-icon size="36" color="#1DB954">mdi-comment-outline</v-icon>
-            <p class="subtitle-2 font-weight-medium mt-2">Comment</p>
-          </v-col>
-        </v-row>
-        <p
-          class="caption text-center mt-4"
-          style="color:#555; max-width: 360px; margin: 0 auto;"
-        >
-          Post your favorite Spotify songs, react with likes, and spark conversations through comments as you explore a vibrant community of music lovers.
-        </p>
-      </v-sheet>
+      <div class="feature-row">
+        <span class="dropcap">L</span>
+        <div>
+          <h4 class="feature-title">Vibe Like</h4>
+          <p class="feature-desc">
+            React to posts you love—tap the heart to show appreciation and spread positive vibes.
+          </p>
+        </div>
+      </div>
+
+      <div class="feature-row">
+        <span class="dropcap">C</span>
+        <div>
+          <h4 class="feature-title">Vibe Chat</h4>
+          <p class="feature-desc">
+            Join the conversation—leave comments and connect with fellow music lovers in real time.
+          </p>
+        </div>
+      </div>
+    </div>
+   
     </div>
   </LoginLayout>
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick , onBeforeUnmount} from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { route } from 'ziggy-js'
 import LoginLayout from '@/Layouts/LoginLayout.vue'
 import { Vue3Marquee as Marquee } from 'vue3-marquee'
+
+const step = ref(1)
+
+
+let lines = []
 
 
 let splide = null
@@ -117,8 +124,39 @@ const { props } = usePage()
 const covers = props.covers || []
 const show = ref(false)
 const carousel = ref(null)
+const isMobile = ref(false)
+
+// your three definitions
+const entries = [
+  {
+    term: 'Vibe Post',
+    pronunciation: '/vaɪb poʊst/',
+    definition:
+      'Share your favorite tracks—upload a Spotify link, add a caption & let everyone catch your vibe.',
+  },
+  {
+    term: 'Vibe Like',
+    pronunciation: '/vaɪb laɪk/',
+    definition:
+      'React to posts you love—tap the heart to show appreciation and spread good vibes.',
+  },
+  {
+    term: 'Vibe Chat',
+    pronunciation: '/vaɪb tʃæt/',
+    definition:
+      'Start a conversation—leave comments, talk about the track, and connect with fellow music lovers.',
+  },
+]
+
+// track flipped state
+const flipped = ref(entries.map(() => false))
+
 
 onMounted(async () => {
+  isMobile.value = window.innerWidth < 600
+  window.addEventListener('resize', () => {
+    isMobile.value = window.innerWidth < 600
+  })
   await new Promise(r => setTimeout(r, 300))
   show.value = true
 
@@ -133,6 +171,8 @@ onMounted(async () => {
     }
   }
 })
+
+
 
 function goSpotify() {
   window.location.href = route('login.spotify')
@@ -156,4 +196,166 @@ function goSpotify() {
 .track-art { user-select: none; pointer-events: none; }
 .track-carousel::-webkit-scrollbar { display: none; }
 .track-carousel { -ms-overflow-style: none; scrollbar-width: none; }
+
+.logo-title {
+  font-family: 'Dancing Script', cursive;
+  font-size: 3rem;
+  color: #333333;           /* charcoal text */
+  position: relative;
+  display: inline-block;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+/* SVG wave underline styling */
+.logo-wave-svg {
+  position: absolute;
+  left: 0;
+  bottom: -8px;
+  width: 100%;
+  height: 6px;
+  overflow: visible;
+}
+
+.logo-wave-svg path {
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+  animation: drawWave 1s ease-out 0.3s forwards;
+}
+
+@keyframes drawWave {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Optional subtle hover lift */
+.logo-title:hover {
+  transform: translateY(-2px) scale(1.02);
+  transition: transform 0.3s ease;
+}
+
+.italic-tagline {
+  max-width: 340px;
+  margin: 0 auto 1.5rem;
+  color: #424242;
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 1.4rem;   /* ~18px */
+  line-height: 1.4;
+  letter-spacing: 0.5px;
+}
+
+.tagline-container {
+  max-width: 340px;
+  margin: 0 auto 1.5rem;
+}
+
+/* existing tagline style */
+.merriweather-tagline {
+  color: #424242;
+  font-family: 'Merriweather', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.375rem;
+  line-height: 1.3;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+/* new “With VibeWave” line */
+.vibewave-subtitle {
+  color: #424242;
+  font-family: 'Merriweather', serif;
+  font-style: normal;
+  font-weight: 700;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  letter-spacing: 0.5px;
+  margin-top: 0.75rem;
+}
+
+.with-line {
+  margin-top: 0.75rem;
+  color: #424242;
+  font-family: 'Merriweather', serif;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 1.25rem;   /* 20px */
+  line-height: 1.3;
+}
+
+.with-line .vibewave-word {
+  font-style: italic;
+  color: #1DB954;
+  /* if you have Playfair Display loaded, you could swap to that: */
+  /* font-family: 'Playfair Display', serif; */
+}
+
+.btn-spotify-circle {
+  border: 2px solid #3c3c3c!important;
+  background-color: transparent !important;
+  color: #000 !important;            /* all text black */
+  border-radius: 9999px !important;
+  padding: 0.5rem 1.5rem !important;
+  box-shadow: none !important;
+  font-family: 'Poppins', sans-serif !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  min-width: auto !important;
+}
+
+
+
+/* gentle hover tint */
+.btn-spotify-circle:hover {
+  background-color: rgba(134, 134, 134, 0.08) !important;
+  transform: translateY(-1px);
+}
+.features-dropcap {
+  padding: 0 1rem;
+}
+
+/* Each feature = one row */
+.feature-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+/* Drop-cap initial */
+.dropcap {
+  font-family: 'Playfair Display', serif;
+  font-size: 4rem;
+  line-height: 1;
+  color: #e0e0e0;
+  flex-shrink: 0;
+}
+
+/* Title */
+.feature-title {
+ color: #424242;
+  font-family: 'Merriweather', serif;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 1.35rem;   /* 20px */
+  line-height: 1.3;
+}
+
+.feature-desc {
+  font-family: 'Playfair Display', serif;  /* same elegant serif as the drop-cap/title */
+  font-size: 1.14rem;
+  line-height: 1.5;
+  color: #555;
+  margin: 0.25rem 0 0;
+  font-style: italic;                     /* optional flourish */
+}
+/* Responsive tweak: on very narrow screens stack under */
+@media (max-width: 400px) {
+  .feature-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .dropcap {
+    font-size: 3rem;
+  }
+}
 </style>
