@@ -16,9 +16,9 @@
     <div class = 'flex items-center' >
       <!-- we’ll fill this next -->
       <div class='mr-4'>{{ user?.name ?? 'Guest' }}</div>
-      <v-avatar color="green">
-         <v-icon icon="mdi-account-circle"></v-icon>
-    </v-avatar>
+       <v-avatar :size="40">
+        <v-img :src="user?.avatar" cover />
+      </v-avatar>
     </div>
   </div>
 </template>
