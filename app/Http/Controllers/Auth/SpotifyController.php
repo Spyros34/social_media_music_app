@@ -11,6 +11,7 @@ use Aerni\Spotify\Facades\Spotify;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Socialite\Facades\Socialite;
 use SocialiteProviders\Spotify\Provider as SpotifyProvider;
 
@@ -29,6 +30,39 @@ class SpotifyController extends Controller
             ->scopes(['user-read-email'])  // runtime-valid, IDE-hinted above
             ->redirect();
     }
+
+   public function searchTracks(Request $request): JsonResponse
+{
+    $q = trim((string) $request->query('q', ''));
+    if ($q === '') {
+        return response()->json(['items' => []]);
+    }
+
+    try {
+        $res = Spotify::searchTracks($q)->limit(10)->get();
+
+        $items = collect($res['tracks']['items'] ?? [])->map(function ($t) {
+            // prefer the largest image if available
+            $images = $t['album']['images'] ?? [];
+            $cover = $images[0]['url'] ?? ($images[1]['url'] ?? ($images[2]['url'] ?? null));
+
+            return [
+                'id'         => $t['id'] ?? null,
+                'title'      => $t['name'] ?? '',
+                'artist'     => $t['artists'][0]['name'] ?? '',
+                'coverUrl'   => $cover,   // <- IMPORTANT
+                'previewUrl' => $t['preview_url'] ?? null,
+                'externalUrl'=> $t['external_urls']['spotify'] ?? null,
+                'durationMs' => $t['duration_ms'] ?? null,
+            ];
+        })->values();
+
+        return response()->json(['items' => $items], 200);
+    } catch (\Throwable $e) {
+        Log::error('Spotify search failed', ['q' => $q, 'msg' => $e->getMessage()]);
+        return response()->json(['items' => []], 200);
+    }
+}
 
     /**
      * Handle Spotify's callback and log the user in.
@@ -115,4 +149,40 @@ class SpotifyController extends Controller
             return response()->json([], 200);
         }
     }
+
+     /**
+     * Return normalized details for a Spotify track id.
+     * Uses client-credentials token via aerni/laravel-spotify.
+     */
+   public function track(string $id): JsonResponse
+{
+    $cacheKey = "spotify:track:$id";
+
+    try {
+        $data = Cache::remember($cacheKey, now()->addHours(6), function () use ($id) {
+            $track = Spotify::track($id)->get(); // may throw
+
+            return [
+                'id'         => $track['id'],
+                'title'      => $track['name'],
+                'artist'     => $track['artists'][0]['name'] ?? '',
+                'coverUrl'   => $track['album']['images'][0]['url'] ?? '',
+                'previewUrl' => $track['preview_url'] ?? null,
+                'externalUrl'=> $track['external_urls']['spotify'] ?? null,
+                'durationMs' => $track['duration_ms'] ?? null,
+            ];
+        });
+
+        return response()->json($data, 200);
+    } catch (\Throwable $e) {
+        Log::error('Spotify track fetch failed', [
+            'track_id' => $id,
+            'message'  => $e->getMessage(),
+        ]);
+
+        return response()->json([
+            'message' => 'Track fetch failed.',
+        ], 502);
+    }
+}
 }

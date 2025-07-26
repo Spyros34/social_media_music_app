@@ -3,15 +3,17 @@
 use App\Models\User;
 use Inertia\Inertia;
 use Aerni\Spotify\Facades\Spotify;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Foundation\Application;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\PostController;
+
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ProfileController;
-use Illuminate\Support\Facades\Auth;
-
+use App\Http\Controllers\PostLikeController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\SpotifyController;
-use App\Http\Controllers\HomeController;
 use App\Http\Middleware\EnsureUserIsAuthenticated;
 use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
 use App\Http\Middleware\RedirectIfAuthenticated as MiddlewareRedirectIfAuthenticated;
@@ -41,3 +43,11 @@ Route::middleware('auth')->group(function(){
 
 Route::get('login/spotify/covers', [SpotifyController::class, 'covers'])
      ->name('login.spotify.covers');
+
+
+Route::middleware('auth')->group(function () {
+    Route::post('/posts', [PostController::class, 'store'])->name('posts.store');
+    Route::post('/posts/{post}/like', [PostLikeController::class, 'toggle'])->name('posts.like');
+    Route::get('/spotify/search', [SpotifyController::class, 'searchTracks']);
+    Route::get('/spotify/track/{id}', [SpotifyController::class, 'track']);
+});
