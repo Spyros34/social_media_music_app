@@ -1,8 +1,16 @@
 <template>
 
-    <Header />
-    <div class="flex-1  bg-gray-100 min-h-screen">
+       <div class="flex items-center justify-between p-4 bg-white shadow">
+    <!-- LEFT: logo -->
+    <InertiaLink href="/login" class="flex items-center ">
+      <img src="/logo.svg" alt="Logo" class="h-8 w-8 mr-2" />
 
+    </InertiaLink>
+
+  </div >
+    <div class="flex-1  bg-gray-100 min-h-screen " >
+      <!-- Header -->
+   
     <main class="mt-6">
         <slot />
       </main>
@@ -20,9 +28,5 @@ import { usePage } from '@inertiajs/vue3';
 const { props: pageProps } = usePage();
 const authUser = pageProps.auth.user;
 
-const showingDropdown = ref(false);
 
-function toggleDropdown() {
-  showingDropdown.value = !showingDropdown.value;
-}
 </script>

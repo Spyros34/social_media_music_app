@@ -11,6 +11,8 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
 
 import { createInertiaApp, Link, Head } from '@inertiajs/vue3'
+import Vue3Marquee from 'vue3-marquee'
+
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -26,6 +28,7 @@ createInertiaApp({
             .use(plugin)
             .use(ZiggyVue)
             .use(vuetify)  
+            .use(Vue3Marquee)
             .component('InertiaLink', Link)
             .component('InertiaHead', Head)
             .mount(el);

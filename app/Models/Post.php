@@ -54,4 +54,8 @@ class Post extends Model
             $this->decrement('likes');
         }
     }
+    public function comments()
+    {
+        return $this->hasMany(Comment::class)->latest();
+    }
 }
