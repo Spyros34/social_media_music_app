@@ -15,7 +15,7 @@
     <!-- RIGHT: profile slot goes here soon -->
     <div class = 'flex items-center' >
       <!-- we’ll fill this next -->
-      <div class='mr-4'>John Doe</div>
+      <div class='mr-4'>{{ user?.name ?? 'Guest' }}</div>
       <v-avatar color="green">
          <v-icon icon="mdi-account-circle"></v-icon>
     </v-avatar>
@@ -24,5 +24,16 @@
 </template>
 
 <script setup>
-import { Link as InertiaLink } from '@inertiajs/inertia-vue3'
+import { usePage, Link as InertiaLink } from '@inertiajs/inertia-vue3'
+
+import { computed } from 'vue'
+// grab the shared props directly
+const page = usePage()
+
+const props = defineProps({
+  user: { type: Object, default: null },
+})
+// access with props.user or use destructuring:
+// const user = computed(() => props.user) // not necessary; template can use user directly if you do:
+const { user } = props
 </script>

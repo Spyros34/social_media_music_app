@@ -1,6 +1,6 @@
 <template>
 
-    <Header />
+    <Header :user="authUser" />
     <div class="flex-1  bg-gray-100 min-h-screen">
 
     <main class="mt-6">

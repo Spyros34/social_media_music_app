@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\SpotifyController;
+use App\Http\Controllers\HomeController;
 use App\Http\Middleware\EnsureUserIsAuthenticated;
 use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
 use App\Http\Middleware\RedirectIfAuthenticated as MiddlewareRedirectIfAuthenticated;
@@ -27,7 +28,7 @@ Route::middleware('web')->group(function () {
 });
 
 // 3) Home page — only authenticated users:
-Route::get('/', fn() => Inertia::render('Home'))
+Route::get('/', [HomeController::class, 'index'])
     ->name('home')
     ->middleware('auth');
 
