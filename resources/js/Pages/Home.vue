@@ -1,43 +1,47 @@
 <template>
   <DefaultLayout>
     <!-- Create Post -->
+    <div class="mx-auto w-full max-w-2xl px-4 sm:px-6">
     <v-card elevation="2" rounded="lg" class="max-w-xl mx-5 mb-8">
       <v-card-title class="text-subtitle-1 font-semibold">
         Create a post
       </v-card-title>
 
       <v-card-text class="space-y-4">
-        <v-autocomplete
-          v-model="selectedItem"
-          v-model:search="query"
-          :items="results"
-          :loading="searching"
-          item-title="display"
-          item-value="id"
-          :return-object="true"
-          clearable
-          label="Search song"
-          hide-details
-          @update:search="onSearchUpdate"
-          @update:modelValue="onSelect"
-        >
-          <!-- custom row -->
-          <template #item="{ props, item }">
-            <v-list-item v-bind="props">
-              <template #prepend>
-                <v-avatar size="40" class="mr-3">
-                  <v-img :src="item.raw.coverUrl" />
-                </v-avatar>
-              </template>
-              <v-list-item-title class="truncate">
-                {{ item.raw.title }}
-              </v-list-item-title>
-              <v-list-item-subtitle class="truncate">
-                {{ item.raw.artist }}
-              </v-list-item-subtitle>
-            </v-list-item>
-          </template>
-        </v-autocomplete>
+      <v-autocomplete
+  v-model="selectedItem"
+  v-model:search="query"
+  :items="results"
+  item-title="display"
+  item-value="id"
+  :return-object="true"
+  clearable
+  hide-details
+  solo
+  flat
+  rounded
+  dense
+  placeholder="Search songs..."
+  prepend-inner-icon="mdi-magnify"
+  menu-icon=""
+  class="vw-search-bar mb-6"
+  @update:search="onSearchUpdate"
+  @update:modelValue="onSelect"
+>
+  <template #item="{ props, item }">
+    <v-list-item v-bind="props" class="vw-search-item">
+      <v-list-item-avatar size="36">
+        <v-img :src="item.raw.coverUrl" />
+      </v-list-item-avatar>
+      <v-list-item-content>
+        <v-list-item-title class="truncate">{{ item.raw.title }}</v-list-item-title>
+        <v-list-item-subtitle class="truncate">{{ item.raw.artist }}</v-list-item-subtitle>
+      </v-list-item-content>
+    </v-list-item>
+  </template>
+</v-autocomplete>
+
+        
 
         <!-- Preview -->
 <div v-if="hasTrack" class="d-flex align-start gap-4">
@@ -110,6 +114,7 @@
   }"
   @toggle-like="toggleLike"
 />
+    </div>
     </div>
   </DefaultLayout>
 </template>
@@ -232,4 +237,5 @@ function toggleLike(id) {
 .space-y-4 > * + * { margin-top: 1rem; }
 .gap-4 { gap: 1rem; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 </style>
