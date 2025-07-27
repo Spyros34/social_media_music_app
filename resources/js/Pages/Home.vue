@@ -8,27 +8,29 @@
       </v-card-title>
 
       <v-card-text class="space-y-4">
-         <v-autocomplete
-        v-model="selectedItem"
-        v-model:search="query"
-        :items="results"
-        :loading="searching"
-        item-title="display"
-        item-value="id"
-        :return-object="true"
-        clearable
-        hide-details
-        solo
-        flat
-        rounded
-        dense
-        placeholder="Search songs..."
-        prepend-inner-icon="mdi-magnify"
-        menu-icon=""           
-        class="vw-search-bar mb-6"
-        @update:search="onSearchUpdate"
-        @update:modelValue="onSelect"
-      >
+       <v-autocomplete
+  v-model="selectedItem"
+  v-model:search="query"
+  :items="results"
+  :loading="searching"       
+  item-title="display"
+  item-value="id"
+  :return-object="true"
+  clearable
+  hide-details
+  variant="outlined"           
+  flat                         
+  rounded
+  density="comfortable"      
+  placeholder="Search songs..."
+  prepend-inner-icon="mdi-magnify"
+  menu-icon=""               
+  append-inner-icon=""        
+  class="vw-search-bar mb-6"
+  style="max-width:350px;"
+  @update:search="onSearchUpdate"
+  @update:modelValue="onSelect"
+>
           <!-- custom row -->
           <template #item="{ props, item }">
             <v-list-item v-bind="props">
