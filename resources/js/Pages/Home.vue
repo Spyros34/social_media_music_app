@@ -9,6 +9,7 @@
 
       <v-card-text class="space-y-4">
        <v-autocomplete
+       
   v-model="selectedItem"
   v-model:search="query"
   :items="results"
@@ -26,8 +27,8 @@
   prepend-inner-icon="mdi-magnify"
   menu-icon=""               
   append-inner-icon=""        
-  class="vw-search-bar mb-6"
-  style="max-width:350px;"
+  class="vw-search-bar mb-6 mx-auto"
+   style="width:100%; max-width:350px;"
   @update:search="onSearchUpdate"
   @update:modelValue="onSelect"
 >
@@ -99,15 +100,17 @@
 
       <v-card-actions>
         <v-spacer />
-        <v-btn
-          :loading="form.processing"
-          :disabled="!hasTrack"
-          color="#1DB954"
-          class="text-black"
-          @click="submit"
-        >
-          Post
-        </v-btn>
+        <!-- Replace your “Post” button with this: -->
+<div class="text-right mt-6">
+  <v-btn
+    :disabled="!hasTrack"
+    class="vw-post-underline-btn"
+    @click="submit"
+  >
+    <v-icon left size="20">mdi-send</v-icon>
+    <span>Post</span>
+  </v-btn>
+</div>
       </v-card-actions>
     </v-card>
 
@@ -245,5 +248,47 @@ function toggleLike(id) {
 .space-y-4 > * + * { margin-top: 1rem; }
 .gap-4 { gap: 1rem; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vw-post-underline-btn {
+  background: transparent !important;
+  color: #1DB954 !important;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  text-transform: none !important;
+  padding: 0 !important;
+  min-width: 0 !important;
+  position: relative;
+  overflow: visible;
+}
 
+/* base underline */
+.vw-post-underline-btn::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 100%;
+  height: 2px;
+  background: #1DB954;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+/* on hover (only when enabled) */
+.vw-post-underline-btn:hover::after {
+  transform: scaleX(1);
+}
+
+/* icon and text spacing */
+.vw-post-underline-btn .v-icon {
+  margin-right: 0.25rem;
+}
+
+/* disabled state */
+.vw-post-underline-btn:disabled {
+  color: #aaa !important;
+}
+.vw-post-underline-btn:disabled::after {
+  background: #aaa;
+}
 </style>
