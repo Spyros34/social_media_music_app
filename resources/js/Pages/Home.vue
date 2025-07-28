@@ -1,129 +1,100 @@
 <template>
   <DefaultLayout>
-    <!-- Create Post -->
-    <div class="mx-auto w-full max-w-2xl px-4 sm:px-6">
-    <v-card rounded="md" class="max-w-xl mx-5 mb-8">
-      <v-card-title class="text-subtitle-1 font-semibold">
-        Create a post
-      </v-card-title>
+    <!-- CREATE & SEARCH SECTION -->
+    <div class="max-w-xl mx-auto px-4 pt-6">
+      <!-- add border-l-4 and pl-4 here -->
+      <div class="create-section mb-6 border-l-4 pl-4" style="border-color: #1DB954">
+        <!-- Search bar -->
+        <v-autocomplete 
+          v-model="selectedItem"
+          v-model:search="query"
+          :items="results"
+          :loading="searching"       
+          item-title="display"
+          item-value="id"
+          :return-object="true"
+          clearable
+          hide-details
+          variant="outlined"           
+          flat                         
+          rounded
+          density="comfortable"      
+          placeholder="Search songs..."
+          prepend-inner-icon="mdi-magnify"
+          menu-icon=""               
+          append-inner-icon=""        
+          class="vw-search-bar mb-6 mx-auto"
+          style="width:100%; max-width:350px;"
+          @update:search="onSearchUpdate"
+          @update:modelValue="onSelect"
+        >
+           <template #item="{ props, item }">
+    <v-list-item v-bind="props" class="flex items-center">
+      <!-- album-art on the left -->
+      <template #prepend>
+        <v-avatar size="45" class="mr-3 ">
+          <v-img :src="item.raw.coverUrl" />
+        </v-avatar>
+      </template>
 
-      <v-card-text class="space-y-4">
-       <v-autocomplete 
-        v-model="selectedItem"
-        v-model:search="query"
-        :items="results"
-        :loading="searching"       
-        item-title="display"
-        item-value="id"
-        :return-object="true"
-        clearable
-        hide-details
-        variant="outlined"           
-        flat                         
-        rounded
-        density="comfortable"      
-        placeholder="Search songs..."
-        prepend-inner-icon="mdi-magnify"
-        menu-icon=""               
-        append-inner-icon=""        
-        class="vw-search-bar mb-6 mx-auto"
-        style="width:100%; max-width:350px;"
-        @update:search="onSearchUpdate"
-        @update:modelValue="onSelect"
-      >
-          <!-- custom row -->
-          <template #item="{ props, item }">
-            <v-list-item v-bind="props">
-              <template #prepend>
-                <v-avatar size="45" class="mr-3">
-                  <v-img :src="item.raw.coverUrl" />
-                </v-avatar>
-              </template>
-              <v-list-item-title class="truncate">
-                {{ item.raw.title }}
-              </v-list-item-title>
-              <v-list-item-subtitle class="truncate">
-                {{ item.raw.artist }}
-              </v-list-item-subtitle>
-            </v-list-item>
-          </template>
+      <!-- title & artist on the right -->
+      <v-list-item-content>
+        <v-list-item-title class="truncate">
+          {{ item.raw.title }}
+        </v-list-item-title>
+        <v-list-item-subtitle class="truncate">
+          {{ item.raw.artist }}
+        </v-list-item-subtitle>
+      </v-list-item-content>
+    </v-list-item>
+  </template>
         </v-autocomplete>
 
-        
-
-        <!-- Preview -->
-<!-- Preview: cover + centered text/buttons -->
-<div v-if="hasTrack" class="album-wrap mb-6 flex flex-col items-center text-center">
- <v-img
-    :src="form.track.coverUrl"
-    class="album-art"
-    cover
-  />
-  <div class="mt-4 text-center w-full px-2">
-    <div class="text-subtitle-1 font-semibold truncate">
-      {{ form.track.title }}
-    </div>
-    <div class="text-body-2 text-grey-darken-1 truncate">
-      {{ form.track.artist }}
-    </div>
-  </div>
-
-  <div class="d-flex align-center gap-3">
-    <v-btn
-      v-if="form.track.externalUrl"
-      variant="tonal"
-      color="#1DB954"
-      class="text-black"
-      :href="form.track.externalUrl"
-      target="_blank"
-      size="small"
+        <!-- Preview + Post -->
+        <div
+          v-if="hasTrack"
+          class="mt-6 mb-20 flex flex-col items-center"
+          id="create-post"
+        >
+          <div class="album-wrap mb-3">
+            <v-img
+              :src="form.track.coverUrl"
+              cover
+              class="album-art"
+            />
+          </div>
+          <div class="text-center px-2 mb-4 w-full max-w-xs">
+            <div class="text-base font-semibold truncate">
+              {{ form.track.title }}
+            </div>
+            <div class="text-sm text-gray-600 truncate">
+              {{ form.track.artist }}
+            </div>
+          </div>
+       
+ <button
+      class="post-pill "
+      :disabled="!hasTrack"
+      @click="submit"
     >
-      <v-icon start icon="mdi-spotify" />
-      Open
-    </v-btn>
-
-    <v-btn
-      v-if="form.track.previewUrl"
-      variant="text"
-      size="small"
-      @click="togglePreview"
-      :prepend-icon="isPlaying ? 'mdi-pause' : 'mdi-play'"
-    >
-      Preview
-    </v-btn>
-  </div>
-  
-</div>
-      </v-card-text>
-
-      <v-card-actions>
-        <v-spacer />
-        <!-- Replace your “Post” button with this: -->
-        <div class="text-right mt-6">
-          <v-btn
-            :disabled="!hasTrack"
-            class="vw-post-underline-btn"
-            @click="submit"
-          >
-            <v-icon left size="20">mdi-send</v-icon>
-            <span>Post</span>
-          </v-btn>
+      <v-icon size="20">mdi-send</v-icon>
+      <span>Post</span>
+    </button>
         </div>
-      </v-card-actions>
-    </v-card>
+      </div>
 
-    <!-- Feed -->
-    <div class="max-w-xl mx-5 space-y-6">
-     <PostCard
-  v-for="p in posts"
-  :key="p.id"
-  :post="{
-    ...p,
-    user: { ...p.user, avatar: p.user.avatar || avatarFrom(p.user) }
-  }"
-  @toggle-like="toggleLike"
-/>
-    </div>
+      <!-- FEED -->
+      <div class="space-y-6 pb-16">
+        <PostCard
+          v-for="p in posts"
+          :key="p.id"
+          :post="{
+            ...p,
+            user: { ...p.user, avatar: p.user.avatar || avatarFrom(p.user) }
+          }"
+          @toggle-like="toggleLike"
+        />
+      </div>
     </div>
   </DefaultLayout>
 </template>
@@ -132,16 +103,17 @@
 import DefaultLayout from '@/Layouts/DefaultLayout.vue'
 import PostCard from '@/Components/PostCard.vue'
 import { ref, computed, onBeforeUnmount } from 'vue'
-import { router, useForm } from '@inertiajs/vue3'
+import { useForm, router } from '@inertiajs/vue3'
 
+// receive posts
 const props = defineProps({
   posts: { type: Array, default: () => [] },
 })
 
-/* ---------- Search ---------- */
+// search state
 const query = ref('')
 const selectedItem = ref(null)
-const results = ref([]) // [{ id, title, artist, coverUrl, previewUrl, externalUrl, durationMs, display }]
+const results = ref([])
 const searching = ref(false)
 let searchTimer
 
@@ -174,14 +146,10 @@ function onSearchUpdate(val) {
 
 function onSelect(item) {
   if (!item) return
-  selectedItem.value = item
-  form.track = {
-    ...form.track,
-    ...item,
-  }
+  form.track = { ...item }
 }
 
-/* ---------- Create Post (hidden form) ---------- */
+// form for posting
 const form = useForm({
   track: {
     id: '',
@@ -191,120 +159,79 @@ const form = useForm({
     previewUrl: '',
     externalUrl: '',
     durationMs: null,
-    caption: '',
   },
 })
 
-const hasTrack = computed(() =>
-  !!form.track.id && !!form.track.title
-)
+const hasTrack = computed(() => !!form.track.id && !!form.track.title)
 
 function submit() {
   form.post('/posts', { preserveScroll: true })
 }
 
-/* optional 30s preview */
-const audio = ref(null)
-const isPlaying = ref(false)
-function togglePreview() {
-  if (!form.track.previewUrl) return
-  if (!audio.value) {
-    audio.value = new Audio(form.track.previewUrl)
-    audio.value.addEventListener('ended', () => { isPlaying.value = false })
-  }
-  if (isPlaying.value) {
-    audio.value.pause()
-    isPlaying.value = false
-  } else {
-    audio.value.currentTime = 0
-    audio.value.play()
-      .then(() => { isPlaying.value = true })
-      .catch(() => { isPlaying.value = false })
-  }
-}
-onBeforeUnmount(() => {
-  if (audio.value) {
-    audio.value.pause()
-    audio.value.src = ''
-    audio.value = null
-  }
-})
-
-/* ---------- Feed helpers ---------- */
+// feed helpers
 function avatarFrom(user) {
   const name = user?.name || 'Vibe Wave'
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1DB954&color=ffffff&bold=true`
 }
+
 function toggleLike(id) {
   router.post(`/posts/${id}/like`, {}, { preserveScroll: true })
 }
 
-
+onBeforeUnmount(() => clearTimeout(searchTimer))
 </script>
 
 <style scoped>
-.space-y-4 > * + * { margin-top: 1rem; }
-.gap-4 { gap: 1rem; }
-.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vw-post-underline-btn {
-  background: transparent !important;
-  color: #1DB954 !important;
-  font-family: 'Poppins', sans-serif;
+/* panel accent */
+
+.search-bar ::v-deep .v-list-item {
+  min-height: 72px; /* ensure enough vertical room */
+}
+
+.search-bar ::v-deep .v-avatar {
+  flex-shrink: 0;
+}
+.post-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border: 2px solid #1DB954;
+  border-radius: 9999px;
+  background: rgba(255,255,255,0.85);
+  color: #1DB954;
   font-weight: 500;
-  text-transform: none !important;
-  padding: 0 !important;
-  min-width: 0 !important;
-  position: relative;
-  overflow: visible;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
 }
-
-/* base underline */
-.vw-post-underline-btn::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: -2px;
-  width: 100%;
-  height: 2px;
+.post-pill:hover:not(:disabled) {
   background: #1DB954;
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.3s ease;
+  color: #fff;
+  transform: translateY(-2px);
 }
-
-/* on hover (only when enabled) */
-.vw-post-underline-btn:hover::after {
-  transform: scaleX(1);
+.post-pill:active:not(:disabled) {
+  transform: translateY(0);
 }
-
-/* icon and text spacing */
-.vw-post-underline-btn .v-icon {
-  margin-right: 0.25rem;
-}
-
-/* disabled state */
-.vw-post-underline-btn:disabled {
-  color: #aaa !important;
-}
-.vw-post-underline-btn:disabled::after {
-  background: #aaa;
+.post-pill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .album-wrap {
-  width: 100%;             /* make it fill its parent */
-  max-width: 360px;        /* same as your PostCard */
-  margin: 0 auto;
-  padding: 20px;
-  border-radius: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.album-art {
-  width: 100%;             /* fill the wrapper */
-  aspect-ratio: 1 / 1;     /* keep it square */
+  width: 200px;
+  height: 200px;
   border-radius: 16px;
+  overflow: hidden;
+}
+.album-art {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
+.vw-search-bar {
+  width: 100%;
+  max-width: 350px;
+}
+.pb-16 { padding-bottom: 4rem; }
 </style>

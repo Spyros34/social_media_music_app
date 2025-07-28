@@ -1,5 +1,5 @@
 <template>
-   <div class="flex items-center justify-between p-2 bg-white shadow">
+   <div class="w-full flex items-center justify-between p-4 bg-white shadow">
     <!-- LEFT: logo -->
      <InertiaLink href="/" class="flex items-center">
       <!-- 1. Fixed-size wrapper -->

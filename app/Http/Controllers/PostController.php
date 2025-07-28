@@ -3,12 +3,14 @@
 // app/Http/Controllers/PostController.php
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StorePostRequest;
 use App\Models\Post;
+use Inertia\Inertia;
 use Illuminate\Http\RedirectResponse;
+use App\Http\Requests\StorePostRequest;
 
 class PostController extends Controller
 {
+
     public function store(StorePostRequest $request): RedirectResponse
     {
         Post::create([

@@ -50,4 +50,5 @@ Route::middleware('auth')->group(function () {
     Route::post('/posts/{post}/like', [PostLikeController::class, 'toggle'])->name('posts.like');
     Route::get('/spotify/search', [SpotifyController::class, 'searchTracks']);
     Route::get('/spotify/track/{id}', [SpotifyController::class, 'track']);
+    
 });
