@@ -2,36 +2,35 @@
   <DefaultLayout>
     <!-- Create Post -->
     <div class="mx-auto w-full max-w-2xl px-4 sm:px-6">
-    <v-card elevation="2" rounded="lg" class="max-w-xl mx-5 mb-8">
+    <v-card rounded="md" class="max-w-xl mx-5 mb-8">
       <v-card-title class="text-subtitle-1 font-semibold">
         Create a post
       </v-card-title>
 
       <v-card-text class="space-y-4">
-       <v-autocomplete
-       
-  v-model="selectedItem"
-  v-model:search="query"
-  :items="results"
-  :loading="searching"       
-  item-title="display"
-  item-value="id"
-  :return-object="true"
-  clearable
-  hide-details
-  variant="outlined"           
-  flat                         
-  rounded
-  density="comfortable"      
-  placeholder="Search songs..."
-  prepend-inner-icon="mdi-magnify"
-  menu-icon=""               
-  append-inner-icon=""        
-  class="vw-search-bar mb-6 mx-auto"
-   style="width:100%; max-width:350px;"
-  @update:search="onSearchUpdate"
-  @update:modelValue="onSelect"
->
+       <v-autocomplete 
+        v-model="selectedItem"
+        v-model:search="query"
+        :items="results"
+        :loading="searching"       
+        item-title="display"
+        item-value="id"
+        :return-object="true"
+        clearable
+        hide-details
+        variant="outlined"           
+        flat                         
+        rounded
+        density="comfortable"      
+        placeholder="Search songs..."
+        prepend-inner-icon="mdi-magnify"
+        menu-icon=""               
+        append-inner-icon=""        
+        class="vw-search-bar mb-6 mx-auto"
+        style="width:100%; max-width:350px;"
+        @update:search="onSearchUpdate"
+        @update:modelValue="onSelect"
+      >
           <!-- custom row -->
           <template #item="{ props, item }">
             <v-list-item v-bind="props">
@@ -53,64 +52,63 @@
         
 
         <!-- Preview -->
-<div v-if="hasTrack" class="d-flex align-start gap-4">
-  <v-img
-    v-if="form.track.coverUrl"
+<!-- Preview: cover + centered text/buttons -->
+<div v-if="hasTrack" class="album-wrap mb-6 flex flex-col items-center text-center">
+ <v-img
     :src="form.track.coverUrl"
-    height="120"
-    width="120"
-    class="cover-img flex-shrink-0"
+    class="album-art"
     cover
   />
-  <div class="flex-1 min-w-0">
+  <div class="mt-4 text-center w-full px-2">
     <div class="text-subtitle-1 font-semibold truncate">
       {{ form.track.title }}
     </div>
     <div class="text-body-2 text-grey-darken-1 truncate">
       {{ form.track.artist }}
     </div>
-
-    <div class="mt-2 d-flex align-center gap-2">
-      <v-btn
-        v-if="form.track.externalUrl"
-        variant="tonal"
-        color="#1DB954"
-        class="text-black"
-        :href="form.track.externalUrl"
-        target="_blank"
-        size="small"
-      >
-        <v-icon start icon="mdi-spotify" />
-        Open
-      </v-btn>
-
-      <v-btn
-        v-if="form.track.previewUrl"
-        variant="text"
-        size="small"
-        @click="togglePreview"
-        :prepend-icon="isPlaying ? 'mdi-pause' : 'mdi-play'"
-      >
-        Preview
-      </v-btn>
-    </div>
   </div>
+
+  <div class="d-flex align-center gap-3">
+    <v-btn
+      v-if="form.track.externalUrl"
+      variant="tonal"
+      color="#1DB954"
+      class="text-black"
+      :href="form.track.externalUrl"
+      target="_blank"
+      size="small"
+    >
+      <v-icon start icon="mdi-spotify" />
+      Open
+    </v-btn>
+
+    <v-btn
+      v-if="form.track.previewUrl"
+      variant="text"
+      size="small"
+      @click="togglePreview"
+      :prepend-icon="isPlaying ? 'mdi-pause' : 'mdi-play'"
+    >
+      Preview
+    </v-btn>
+  </div>
+  
 </div>
       </v-card-text>
 
       <v-card-actions>
         <v-spacer />
         <!-- Replace your “Post” button with this: -->
-<div class="text-right mt-6">
-  <v-btn
-    :disabled="!hasTrack"
-    class="vw-post-underline-btn"
-    @click="submit"
-  >
-    <v-icon left size="20">mdi-send</v-icon>
-    <span>Post</span>
-  </v-btn>
-</div>
+        <div class="text-right mt-6">
+          <v-btn
+            :disabled="!hasTrack"
+            class="vw-post-underline-btn"
+            @click="submit"
+          >
+            <v-icon left size="20">mdi-send</v-icon>
+            <span>Post</span>
+          </v-btn>
+        </div>
       </v-card-actions>
     </v-card>
 
@@ -290,5 +288,23 @@ function toggleLike(id) {
 }
 .vw-post-underline-btn:disabled::after {
   background: #aaa;
+}
+
+.album-wrap {
+  width: 100%;             /* make it fill its parent */
+  max-width: 360px;        /* same as your PostCard */
+  margin: 0 auto;
+  padding: 20px;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.album-art {
+  width: 100%;             /* fill the wrapper */
+  aspect-ratio: 1 / 1;     /* keep it square */
+  border-radius: 16px;
+  object-fit: cover;
 }
 </style>
