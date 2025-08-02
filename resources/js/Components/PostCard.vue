@@ -86,54 +86,118 @@
 <script setup>
 import { computed, ref, onBeforeUnmount } from 'vue'
 
+/* ------------------------------------------------------------------
+   Props and emitted events
+-------------------------------------------------------------------*/
 const props = defineProps({
-  post:    { type: Object, required: true },
+  post   : { type: Object, required: true },
   loading: { type: Boolean, default: false },
 })
 
-defineEmits(['toggle-like','toggle-save','repost','focus-comments'])
+defineEmits([
+  'toggle-like',
+  'toggle-save',
+  'repost',
+  'focus-comments',
+])
 
-/* ---------- derived helpers ---------- */
-const track      = computed(() => props.post.track || {})
-const coverSrc   = computed(() => track.value.coverUrl || track.value.album?.images?.[0]?.url || null)
-const titleText  = computed(() => track.value.title  || track.value.name || 'Unknown Title')
-const artistText = computed(() => track.value.artist || track.value.artists?.[0]?.name || 'Unknown Artist')
+/* ------------------------------------------------------------------
+   Quick access helpers
+-------------------------------------------------------------------*/
+const track = computed(() => props.post.track ?? {})
 
-function formatTimeAgo(iso){
-  if(!iso) return ''
-  const diff = (Date.now() - new Date(iso).getTime()) / 1000
-  if(diff < 60) return 'just now'
-  const mins = Math.floor(diff/60)
-  if(mins < 60) return `${mins}m`
-  const hrs  = Math.floor(mins/60)
-  if(hrs  < 24) return `${hrs}h`
-  return `${Math.floor(hrs/24)}d`
+const coverSrc = computed(() =>
+  track.value.coverUrl
+  || track.value.album?.images?.[0]?.url
+  || null
+)
+
+const titleText  = computed(() =>
+  track.value.title
+  || track.value.name
+  || 'Unknown Title'
+)
+
+const artistText = computed(() =>
+  track.value.artist
+  || track.value.artists?.[0]?.name
+  || 'Unknown Artist'
+)
+
+function formatTimeAgo (iso) {
+  if (!iso) return ''
+  const secs = (Date.now() - new Date(iso)) / 1000
+  if (secs < 60) return 'just now'
+  const mins = Math.floor(secs / 60) ; if (mins < 60) return `${mins}m`
+  const hrs  = Math.floor(mins / 60) ; if (hrs  < 24) return `${hrs}h`
+  return `${Math.floor(hrs / 24)}d`
 }
 const timeAgo = computed(() => formatTimeAgo(props.post.createdAt))
 
-/* preview-audio */
-const audio          = ref(null)
-const isPlaying      = ref(false)
-const previewProgress= ref(0)
+/* ------------------------------------------------------------------
+   Preview-audio player
+-------------------------------------------------------------------*/
+const audio           = ref(null)
+const isPlaying       = ref(false)
+const previewProgress = ref(0)
 
-function togglePlay(){
-  if(!track.value.previewUrl) return
-  if(!audio.value){
-    audio.value = new Audio(track.value.previewUrl)
-    audio.value.addEventListener('timeupdate',()=> {
-      if(!audio.value?.duration) return
-      previewProgress.value = (audio.value.currentTime / audio.value.duration) * 100
+function togglePreview () {
+  const url = track.value.previewUrl
+  if (!url) return
+
+  if (!audio.value) {
+    audio.value = new Audio(url)
+
+    audio.value.addEventListener('timeupdate', () => {
+      if (!audio.value.duration) return
+      previewProgress.value =
+        (audio.value.currentTime / audio.value.duration) * 100
     })
-    audio.value.addEventListener('ended',()=>{ isPlaying.value=false; previewProgress.value=0 })
+
+    audio.value.addEventListener('ended', () => {
+      isPlaying.value = false
+      previewProgress.value = 0
+    })
   }
-  if(isPlaying.value){ audio.value.pause(); isPlaying.value=false }
-  else{
-    audio.value.currentTime=0
-    audio.value.play().then(()=> isPlaying.value=true).catch(()=> isPlaying.value=false)
+
+  if (isPlaying.value) {
+    audio.value.pause()
+    isPlaying.value = false
+  } else {
+    audio.value.currentTime = 0
+    audio.value
+      .play()
+      .then(() => (isPlaying.value = true))
+      .catch(() => (isPlaying.value = false))
   }
 }
-function onCoverClick(){ togglePlay() }
-onBeforeUnmount(()=>{ audio.value?.pause(); audio.value=null })
+
+/* ------------------------------------------------------------------
+   Click on cover: preview OR open on Spotify
+-------------------------------------------------------------------*/
+const externalUrl = computed(() =>
+  track.value.externalUrl
+  || track.value.external_urls?.spotify
+  || null
+)
+
+function onCoverClick () {
+  if (track.value.previewUrl) {
+    togglePreview()
+  } else if (externalUrl.value) {
+    window.open(externalUrl.value, '_blank', 'noopener')
+  }
+}
+
+/* ------------------------------------------------------------------
+   Clean-up
+-------------------------------------------------------------------*/
+onBeforeUnmount(() => {
+  if (audio.value) {
+    audio.value.pause()
+    audio.value = null
+  }
+})
 </script>
 
 <style scoped>
