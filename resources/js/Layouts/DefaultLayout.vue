@@ -1,9 +1,12 @@
 <!-- resources/js/Layouts/ResponsiveLayout.vue -->
 <template>
+  
   <div class="min-h-screen flex flex-col bg-gray-100">
     <!-- DESKTOP HEADER (hidden on mobile) -->
+    
     <header class="hidden md:flex w-full flex-none">
       <Header :user="authUser" />
+      
     </header>
 
     <!-- MAIN CONTENT -->

@@ -1,6 +1,7 @@
 <template>
   <DefaultLayout>
     <!-- CREATE & SEARCH SECTION -->
+    
     <div class="max-w-xl mx-auto px-4 pt-6">
       <!-- add border-l-4 and pl-4 here -->
       <div class="create-section mb-6 border-l-4 pl-4" style="border-color: #1DB954">
@@ -27,6 +28,8 @@
           style="width:100%; max-width:350px;"
           @update:search="onSearchUpdate"
           @update:modelValue="onSelect"
+          @clear="clearSelection"
+          @click:clear="clearSelection"
         >
            <template #item="{ props, item }">
     <v-list-item v-bind="props" class="flex items-center">
@@ -85,104 +88,122 @@
 
       <!-- FEED -->
       <div class="space-y-6 pb-16">
-        <PostCard
-          v-for="p in posts"
-          :key="p.id"
-          :post="{
-            ...p,
-            user: { ...p.user, avatar: p.user.avatar || avatarFrom(p.user) }
-          }"
-          @toggle-like="toggleLike"
-        />
-      </div>
-    </div>
+  <div
+    v-for="p in posts"
+    :key="p.id"
+    class="observer-target"      
+    :data-post-id="p.id"
+  >
+    <PostCard
+      :post="{
+        ...p,
+        user: { ...p.user, avatar: p.user.avatar || avatarFrom(p.user) }
+      }"
+      @toggle-like="toggleLike"
+    />
+  </div>
+</div>
+</div>
   </DefaultLayout>
 </template>
 
 <script setup>
-import DefaultLayout from '@/Layouts/DefaultLayout.vue'
-import PostCard from '@/Components/PostCard.vue'
-import { ref, computed, onBeforeUnmount } from 'vue'
+/* ───────── Imports ───────── */
+import DefaultLayout    from '@/Layouts/DefaultLayout.vue'
+import PostCard         from '@/Components/PostCard.vue'
 import { useForm, router } from '@inertiajs/vue3'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 
-// receive posts
-const props = defineProps({
-  posts: { type: Array, default: () => [] },
-})
+/* ───────── Props ───────── */
+const props = defineProps({ posts: { type: Array, default: () => [] } })
 
-// search state
-const query = ref('')
+/* ───────── 1.  Search & “create-post” logic (unchanged) ───────── */
+const query        = ref('')
 const selectedItem = ref(null)
-const results = ref([])
-const searching = ref(false)
-let searchTimer
+const results      = ref([])
+const searching    = ref(false)
+let   timer        = null
 
-async function runSearch(q) {
+async function runSearch (q){
   searching.value = true
-  try {
-    const res = await fetch(`/spotify/search?q=${encodeURIComponent(q)}`, {
-      headers: { Accept: 'application/json' },
-      credentials: 'same-origin',
-    })
-    const data = await res.json()
-    results.value = (data.items || []).map(t => ({
-      ...t,
-      display: `${t.title} — ${t.artist}`,
-    }))
-  } finally {
-    searching.value = false
-  }
+  try{
+    const r = await fetch(`/spotify/search?q=${encodeURIComponent(q)}`)
+    const d = await r.json()
+    results.value = (d.items ?? []).map(t => ({ ...t, display:`${t.title} — ${t.artist}` }))
+  }finally{ searching.value = false }
+}
+function onSearchUpdate(v){
+  clearTimeout(timer)
+  query.value = v
+  if(!v || v.trim().length < 2){ results.value = []; return }
+  timer = setTimeout(()=> runSearch(v.trim()), 250)
 }
 
-function onSearchUpdate(val) {
-  clearTimeout(searchTimer)
-  query.value = val
-  if (!val || val.trim().length < 2) {
-    results.value = []
-    return
-  }
-  searchTimer = setTimeout(() => runSearch(val.trim()), 250)
+const form     = useForm({ track:{ id:'',title:'',artist:'',coverUrl:'',previewUrl:'',externalUrl:'',durationMs:null }})
+const hasTrack = computed(() => !!form.track.id)
+function onSelect(i){ i && (form.track = { ...i }) }
+function submit (){ hasTrack.value && form.post('/posts',{ preserveScroll:true }) }
+
+function clearSelection(){
+  selectedItem.value = null
+  query.value = ''
+  form.track  = { ...form.defaults().track }
+}
+watch(selectedItem,v => !v && clearSelection())
+onBeforeUnmount(()=> clearTimeout(timer))
+
+function avatarFrom(u){
+  const n = u?.name || 'Vibe Wave'
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(n)}&background=1DB954&color=fff`
+}
+function toggleLike(id){
+  router.post(`/posts/${id}/like`, {}, { preserveScroll:true })
 }
 
-function onSelect(item) {
-  if (!item) return
-  form.track = { ...item }
+/* ───────── 2.  Blurred-cover page background ───────── */
+
+/* proxy helper → returns CORS-safe, down-scaled image */
+const proxied = url =>
+  `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//,''))}&w=600&h=600`
+
+let activeCover = ''          // last cover URL applied
+function setPageBackground(url){
+  if(!url || url === activeCover) return
+  activeCover = url
+
+  const root = document.documentElement
+  root.classList.add('is-fading')                                  // start fade
+  root.style.setProperty('--page-bg', `url("${proxied(url)}")`)    // place new img
+
+  /* remove helper class after transition (must match CSS 2.8 s) */
+  setTimeout(()=> root.classList.remove('is-fading'), 2800)
 }
 
-// form for posting
-const form = useForm({
-  track: {
-    id: '',
-    title: '',
-    artist: '',
-    coverUrl: '',
-    previewUrl: '',
-    externalUrl: '',
-    durationMs: null,
-  },
-})
+/* IntersectionObserver – wait until 85 % of a post is visible */
+let obs = null, activeId = null
+function whenIntersect(entries){
+  const best = entries.filter(e=>e.isIntersecting)
+                      .sort((a,b)=> b.intersectionRatio - a.intersectionRatio)[0]
+  if(!best) return
+  const pid = best.target.dataset.postId
+  if(!pid || pid === activeId) return
+  activeId = pid
 
-const hasTrack = computed(() => !!form.track.id && !!form.track.title)
-
-function submit() {
-  form.post('/posts', { preserveScroll: true })
+  const post = props.posts.find(p => String(p.id) === pid)
+  setPageBackground(post?.track?.coverUrl ?? null)
 }
 
-// feed helpers
-function avatarFrom(user) {
-  const name = user?.name || 'Vibe Wave'
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1DB954&color=ffffff&bold=true`
+function mountObserver(){
+  obs?.disconnect()
+  obs = new IntersectionObserver(whenIntersect, { threshold:[0.85] }) // ← later trigger
+  nextTick(()=> document.querySelectorAll('.observer-target').forEach(el=> obs.observe(el)))
 }
 
-function toggleLike(id) {
-  router.post(`/posts/${id}/like`, {}, { preserveScroll: true })
-}
-
-onBeforeUnmount(() => clearTimeout(searchTimer))
+/* initialise + re-initialise when feed changes */
+onMounted(()=> mountObserver())
+watch(()=> props.posts.length, () => setTimeout(mountObserver, 80))
 </script>
-
 <style scoped>
-/* panel accent */
 
 .search-bar ::v-deep .v-list-item {
   min-height: 72px; /* ensure enough vertical room */
@@ -234,4 +255,24 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
   max-width: 350px;
 }
 .pb-16 { padding-bottom: 4rem; }
+</style>
+<style>
+/* the two stacked layers stay the same – we simply slow the fade */
+body::before,
+body::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  background:var(--page-bg,#f5f5f5) center/cover no-repeat;
+  filter:blur(40px) brightness(.7);
+  transform:scale(1.1);
+  transition:opacity 2.8s cubic-bezier(.4,0,.2,1); /* ⬅︎ slower & silkier */
+}
+
+body::before{ opacity:1 }
+body::after { opacity:0 }
+
+body.is-fading::before{ opacity:0 }
+body.is-fading::after { opacity:1 }
 </style>
