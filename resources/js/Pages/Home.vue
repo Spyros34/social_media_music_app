@@ -28,7 +28,6 @@
           style="width:100%; max-width:350px;"
           @update:search="onSearchUpdate"
           @update:modelValue="onSelect"
-          @clear="clearSelection"
           @click:clear="clearSelection"
         >
            <template #item="{ props, item }">
@@ -67,10 +66,10 @@
             />
           </div>
           <div class="text-center px-2 mb-4 w-full max-w-xs">
-            <div class="text-base font-semibold truncate">
+            <div class="text-base font-semibold truncate preview-title">
               {{ form.track.title }}
             </div>
-            <div class="text-sm text-gray-600 truncate">
+            <div class="text-sm text-gray-600 truncate  preview-artist">
               {{ form.track.artist }}
             </div>
           </div>
@@ -132,24 +131,47 @@ async function runSearch (q){
     results.value = (d.items ?? []).map(t => ({ ...t, display:`${t.title} — ${t.artist}` }))
   }finally{ searching.value = false }
 }
-function onSearchUpdate(v){
+function onSearchUpdate (v) {
   clearTimeout(timer)
   query.value = v
-  if(!v || v.trim().length < 2){ results.value = []; return }
-  timer = setTimeout(()=> runSearch(v.trim()), 250)
+
+  // If user clears the field (typing backspace or clicking ✕),
+  // also clear the selected item and the post preview.
+  if (!v || v.trim().length < 2) {
+    results.value = []
+    selectedItem.value = null
+    form.track = {
+      id: '',
+      title: '',
+      artist: '',
+      coverUrl: '',
+      previewUrl: '',
+      externalUrl: '',
+      durationMs: null,
+    }
+    return
+  }
+
+  timer = setTimeout(() => runSearch(v.trim()), 250)
 }
 
 const form     = useForm({ track:{ id:'',title:'',artist:'',coverUrl:'',previewUrl:'',externalUrl:'',durationMs:null }})
 const hasTrack = computed(() => !!form.track.id)
-function onSelect(i){ i && (form.track = { ...i }) }
+function onSelect(i){
+  if (!i) {               // X clicked or selection cleared
+    clearSelection()
+    return
+  }
+  form.track = { ...i }   // normal select
+}
 function submit (){ hasTrack.value && form.post('/posts',{ preserveScroll:true }) }
 
 function clearSelection(){
   selectedItem.value = null
   query.value = ''
-  form.track  = { ...form.defaults().track }
+  form.track = { ...form.defaults().track }
 }
-watch(selectedItem,v => !v && clearSelection())
+
 onBeforeUnmount(()=> clearTimeout(timer))
 
 function avatarFrom(u){
@@ -239,6 +261,16 @@ watch(()=> props.posts.length, () => setTimeout(mountObserver, 80))
   cursor: not-allowed;
 }
 
+.preview-title {
+  color: rgba(255, 255, 255, 0.768);
+
+}
+
+.preview-artist {
+  color: rgba(255, 255, 255, 0.637);
+
+}
+
 .album-wrap {
   width: 200px;
   height: 200px;
@@ -253,6 +285,8 @@ watch(()=> props.posts.length, () => setTimeout(mountObserver, 80))
 .vw-search-bar {
   width: 100%;
   max-width: 350px;
+  color: #ffffffc3;
+
 }
 .pb-16 { padding-bottom: 4rem; }
 </style>
@@ -267,7 +301,7 @@ body::after{
   background:var(--page-bg,#f5f5f5) center/cover no-repeat;
   filter:blur(40px) brightness(.7);
   transform:scale(1.1);
-  transition:opacity 2.8s cubic-bezier(.4,0,.2,1); /* ⬅︎ slower & silkier */
+  transition:opacity 1.2s cubic-bezier(.4,0,.2,1); /* ⬅︎ slower & silkier */
 }
 
 body::before{ opacity:1 }
