@@ -87,7 +87,7 @@
 import DefaultLayout from '@/Layouts/DefaultLayout.vue'
 import PostCard from '@/Components/PostCard.vue'
 import { router } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
   profile: { type: Object, default: () => null },
@@ -111,7 +111,6 @@ function normalize(list) {
     createdAt: p.createdAt ?? p.created_at ?? null,
   }))
 }
-
 const ownPosts   = computed(() => normalize(props.posts))
 const likedPosts = computed(() => normalize(props.liked))
 
@@ -128,7 +127,7 @@ function toggleLike(id) {
   router.post(`/posts/${id}/like`, {}, { preserveScroll: true })
 }
 
-/* blurred background for each card shell */
+/* blurred background for each card shell (unchanged) */
 const coverFrom = (post) =>
   post?.track?.coverUrl ||
   post?.track?.album?.images?.[0]?.url ||
@@ -147,104 +146,76 @@ const bgStyle = (post) => {
 const segStyle = computed(() => ({
   transform: `translateX(${tab.value === 'posts' ? '0%' : '100%'})`,
 }))
+
+/* ── FORCE SOLID WHITE PAGE BG ON THIS ROUTE ───────────────
+   - Disable global body::before/after “dynamic cover” layers
+   - Set the page-bg var to white for anything that reads it
+*/
+onMounted(() => {
+  const root = document.documentElement
+  root.classList.add('static-bg')                 // disables global overlays via CSS below
+  root.style.setProperty('--page-bg', '#ffffff')  // just in case something reads this var
+})
+onBeforeUnmount(() => {
+  const root = document.documentElement
+  root.classList.remove('static-bg')
+  // (optional) don’t reset --page-bg so Home can set it next time it mounts
+})
 </script>
 
 <style scoped>
-/* Page backdrop (soft neutral → fits your feed glass) */
+/* Solid white page background */
 .profile-page {
   position: relative;
-  background: linear-gradient(180deg, #f6f7f9 0%, #eff1f5 55%, #e9ecf2 100%);
-}
-.profile-page::before {
-  content: "";
-  position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background:
-    radial-gradient(1200px 500px at 50% -200px, rgba(0,0,0,0.05), transparent 60%),
-    radial-gradient(900px 400px at 50% 120%, rgba(0,0,0,0.06), transparent 55%);
+  background: #ffffff; /* <- one color, no gradient */
 }
 
 /* ---------- HERO (no actions) ---------- */
 .profile-hero{
-  background: rgba(255,255,255,.78);
+  background: rgba(255,255,255,.92);
   border: 1px solid rgba(17,24,39,.08);
   box-shadow: 0 8px 26px rgba(16,24,40,.06);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(4px);
   padding: 16px 14px;
 }
-.hero-inner{
-  display:flex; align-items:center; gap:14px;
-}
-.hero-avatar{
-  box-shadow: 0 6px 16px rgba(16,24,40,.10);
-}
-.hero-text{
-  display:flex; flex-direction:column; gap:6px;
-}
-.hero-name{
-  font-weight: 700; font-size: 20px; color: #0f172a;
-}
-.hero-bio{
-  font-size: 13px; color: #374151; line-height: 1.25;
-}
-.hero-stats{
-  display:flex; align-items:center; gap:8px;
-  font-size: 12px; color: #4b5563;
-}
+.hero-inner{ display:flex; align-items:center; gap:14px; }
+.hero-avatar{ box-shadow: 0 6px 16px rgba(16,24,40,.10); }
+.hero-text{ display:flex; flex-direction:column; gap:6px; }
+.hero-name{ font-weight: 700; font-size: 20px; color: #0f172a; }
+.hero-bio{ font-size: 13px; color: #374151; line-height: 1.25; }
+.hero-stats{ display:flex; align-items:center; gap:8px; font-size: 12px; color: #4b5563; }
 .hero-stats .dot{ opacity:.5; }
 
-/* ---------- Sticky segmented control ---------- */
 /* Sticky segmented control */
-.sticky-tabs{
-  position: sticky;
-  top: 0.25rem;
-  padding: 4px 0;
-  z-index: 20;
-}
-
-/* mobile: full width look */
+.sticky-tabs{ position: sticky; top: 0.25rem; padding: 4px 0; z-index: 20; margin-bottom: 10px; }
 .segmented{
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  padding: 6px;
-  border-radius: 14px;
-  background: rgba(255,255,255,.65);
+  position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  padding: 6px; border-radius: 14px;
+  background: rgba(255,255,255,.8);
   border: 1px solid rgba(17,24,39,.08);
-  backdrop-filter: blur(8px);
   box-shadow: 0 6px 18px rgba(16,24,40,.06);
   width: 100%;
 }
-
-/* desktop/tablet: center the pill, constrain width */
 @media (min-width: 768px){
-  .segmented{
-    max-width: 360px;
-    margin-left: auto;
-    margin-right: auto; /* centers it */
-  }
+  .segmented{ max-width: 360px; margin-inline: auto; }
 }
 .seg-btn{
-  position: relative; z-index: 1;
-  height: 40px; border-radius: 10px;
-  font-size: 14px; font-weight: 600;
-  color: rgba(17,24,39,.7);
+  position: relative; z-index: 1; height: 40px; border-radius: 10px;
+  font-size: 14px; font-weight: 600; color: rgba(17,24,39,.7);
   display:flex; align-items:center; justify-content:center; gap:6px;
   background: transparent; border: 0;
 }
 .seg-btn.active{ color: #0f172a; }
 .seg-btn .count{ font-size: 12px; font-weight: 700; color: rgba(17,24,39,.6); }
-
-/* animated pill */
 .seg-active{
   position: absolute; top: 6px; left: 6px; width: calc(50% - 6px); height: 40px;
   border-radius: 10px;
-  background: rgba(255,255,255,.95);
+  background: #ffffff;
   box-shadow: 0 6px 18px rgba(16,24,40,.08), inset 0 0 0 1px rgba(17,24,39,.06);
   transition: transform .22s cubic-bezier(.2,.8,.2,1);
 }
 
-/* ---------- Post shells (glass over blurred cover) ---------- */
+/* Post shells (keep your blur-on-cover effect) */
 .card-shell { position: relative; z-index: 0; overflow: hidden; border-radius: 18px; }
 .bg-layer {
   position: absolute; inset: 0; z-index: 0;
@@ -255,6 +226,5 @@ const segStyle = computed(() => ({
 
 /* Vuetify polish */
 .profile-page :deep(.v-divider) { opacity: .6; }
-
 
 </style>
