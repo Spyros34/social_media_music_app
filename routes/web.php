@@ -50,5 +50,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/posts/{post}/like', [PostLikeController::class, 'toggle'])->name('posts.like');
     Route::get('/spotify/search', [SpotifyController::class, 'searchTracks']);
     Route::get('/spotify/track/{id}', [SpotifyController::class, 'track']);
-    
+    Route::get('/profile', [ProfileController::class, 'showMe'])->name('profile.me');
+    Route::get('/u/{user}', [ProfileController::class, 'show'])->name('profile.show');
+
+    Route::delete('/posts/{post}', [PostController::class, 'destroy'])
+    ->name('posts.destroy');
 });
+

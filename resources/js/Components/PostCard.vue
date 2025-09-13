@@ -14,6 +14,30 @@
         {{ post.user?.name }}
       </v-list-item-title>
       <v-list-item-subtitle>{{ timeAgo }}</v-list-item-subtitle>
+
+     <template #append>
+     <v-menu
+  v-if="isOwner"
+  v-model="menuOpen"
+  location="bottom end"
+  offset="6"
+  :close-on-content-click="true"
+  content-class="glass-surface"
+>
+  <template #activator="{ props }">
+    <v-btn v-bind="props" icon variant="text" class="more-btn" aria-label="More actions">
+      <v-icon icon="mdi-dots-horizontal" size="22" />
+    </v-btn>
+  </template>
+
+  <v-list class="action-menu action-menu--sm" rounded="lg" elevation="6" nav>
+    <div class="menu-row destructive" @click.stop="confirmDelete = true">
+      <v-icon icon="mdi-trash-can-outline" size="18" />
+      <span>Delete Post</span>
+    </div>
+  </v-list>
+</v-menu>
+    </template>
     </v-list-item>
 
     <!-- cover + track title / artist -->
@@ -49,7 +73,7 @@
     <v-divider class="opacity-30" />
 
     <!-- actions -->
-    <div class="px-2 py-1 d-flex align-center">
+    <div class="px-2 py-2 d-flex justify-center">
       <v-btn
         variant="text"
         :color="post.stats?.liked ? '#1DB954' : undefined"
@@ -58,33 +82,28 @@
         <v-icon :icon="post.stats?.liked ? 'mdi-heart' : 'mdi-heart-outline'" class="mr-1" />
         {{ post.stats?.likes ?? 0 }}
       </v-btn>
-
-      <v-btn variant="text" @click="$emit('focus-comments', post.id)">
-        <v-icon icon="mdi-message-outline" class="mr-1" />
-        {{ post.stats?.comments ?? 0 }}
-      </v-btn>
-
-      <v-btn variant="text" @click="$emit('repost', post.id)">
-        <v-icon icon="mdi-repeat-variant" class="mr-1" />
-        {{ post.stats?.reposts ?? 0 }}
-      </v-btn>
-
-      <v-spacer />
-
-      <v-btn
-        icon
-        variant="text"
-        :color="post.stats?.saved ? '#1DB954' : undefined"
-        @click="$emit('toggle-save', post.id)"
-      >
-        <v-icon :icon="post.stats?.saved ? 'mdi-bookmark' : 'mdi-bookmark-outline'" />
-      </v-btn>
     </div>
+
+    <!-- CONFIRMATION DIALOG -->
+    <v-dialog v-model="confirmDelete" max-width="420">
+      <v-card>
+        <v-card-title class="text-h6">Delete post?</v-card-title>
+        <v-card-text>This action cannot be undone.</v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="confirmDelete = false">Cancel</v-btn>
+          <v-btn color="error" :loading="deleting" @click="onDeleteConfirmed">
+            Delete
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script setup>
-import { computed, ref, onBeforeUnmount } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
+import { usePage, router } from '@inertiajs/vue3'   // need router to auto-close on nav
 
 /* ------------------------------------------------------------------
    Props and emitted events
@@ -94,15 +113,84 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
 })
 
-defineEmits([
+const emit = defineEmits([
   'toggle-like',
   'toggle-save',
   'repost',
   'focus-comments',
+  'delete-post'
 ])
 
 /* ------------------------------------------------------------------
-   Quick access helpers
+   Auth → owner check
+-------------------------------------------------------------------*/
+const page = usePage()
+const authUser = computed(() => page.props.auth?.user || null)
+const isOwner  = computed(() => {
+  const uid = authUser.value?.id
+  const pid = props.post.user_id ?? props.post.user?.id
+  return uid && pid && uid === pid
+})
+
+/* ------------------------------------------------------------------
+   v-menu control (close on scroll / nav / resize)
+-------------------------------------------------------------------*/
+const menuOpen = ref(false)
+
+function closeMenu() {
+  if (menuOpen.value) menuOpen.value = false
+}
+
+function onScrollLikeEvents() {
+  // any page movement should close the menu
+  closeMenu()
+}
+
+onMounted(() => {
+  // Window-level listeners
+  window.addEventListener('scroll', onScrollLikeEvents, { passive: true })
+  window.addEventListener('touchmove', onScrollLikeEvents, { passive: true })
+  window.addEventListener('wheel', onScrollLikeEvents, { passive: true })
+  window.addEventListener('resize', onScrollLikeEvents, { passive: true })
+
+  // Inertia navigation
+  router.on('start', closeMenu)
+
+  // Tab visibility changes
+  document.addEventListener('visibilitychange', closeMenu, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', onScrollLikeEvents)
+  window.removeEventListener('touchmove', onScrollLikeEvents)
+  window.removeEventListener('wheel', onScrollLikeEvents)
+  window.removeEventListener('resize', onScrollLikeEvents)
+
+  router.off('start', closeMenu)
+  document.removeEventListener('visibilitychange', closeMenu)
+})
+
+/* ------------------------------------------------------------------
+   Delete dialog state + action
+-------------------------------------------------------------------*/
+const confirmDelete = ref(false)
+const deleting = ref(false)
+
+function onDeleteConfirmed () {
+  deleting.value = true
+  emit('delete-post', props.post.id)
+  confirmDelete.value = false
+  deleting.value = false
+}
+
+function openDeleteDialog() {
+  // Called from the menu item
+  menuOpen.value = false
+  confirmDelete.value = true
+}
+
+/* ------------------------------------------------------------------
+   Quick access helpers (track, texts, time)
 -------------------------------------------------------------------*/
 const track = computed(() => props.post.track ?? {})
 
@@ -132,7 +220,8 @@ function formatTimeAgo (iso) {
   const hrs  = Math.floor(mins / 60) ; if (hrs  < 24) return `${hrs}h`
   return `${Math.floor(hrs / 24)}d`
 }
-const timeAgo = computed(() => formatTimeAgo(props.post.createdAt))
+// Support both created_at (snake) and createdAt (camel)
+const timeAgo = computed(() => formatTimeAgo(props.post.created_at ?? props.post.createdAt))
 
 /* ------------------------------------------------------------------
    Preview-audio player
@@ -212,7 +301,7 @@ onBeforeUnmount(() => {
   transition: background 0.4s ease, box-shadow 0.4s ease;
 }
 .glass-card *{
-  color:#fff !important;              /* pure white */
+  color:#fff !important;
   text-shadow:0 1px 3px rgba(0,0,0,.35);
 }
 .glass-card:hover{
@@ -220,11 +309,103 @@ onBeforeUnmount(() => {
   box-shadow: 0 18px 38px -12px rgba(0,0,0,0.30);
 }
 
-.album-holder{ max-width: 360px; margin:0 auto; 
-color:#fff ;              /* pure white */
-  text-shadow:0 1px 3px rgba(0,0,0,.35);}
+.album-holder{ max-width: 360px; margin:0 auto; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.35);}
 .album-img   { border-radius: 14px; }
+
+/* CIRCULAR BUTTON + RIGHT MARGIN */
+.delete-btn {
+  width: 40px;                 /* circle size */
+  height: 40px;
+  min-width: 40px;             /* Vuetify sometimes enforces min-width */
+  border-radius: 9999px !important;
+  margin-right: 10px;
+  padding: 0;                  /* keep icon centered */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  /* subtle red backplate */
+  background-color: rgba(245, 245, 245, 0.43) !important;
+}
+
+/* keep the icon red, override your glass-card global white */
+.delete-btn :deep(.v-icon) {
+  color: white !important;
+}
+
+/* hover polish */
+.delete-btn:hover {
+  background-color: white !important;
+}
+
+
 
 .gap-2    { gap:.5rem }
 .truncate { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+</style>
+
+<style>
+/* FORCE YOUR GLASS BACKGROUND ON THE MENU SURFACE */
+.v-overlay__content.glass-surface {
+  background: rgba(86, 86, 86, 0.415) !important;   /* YOUR BG */
+  backdrop-filter: blur(60px) saturate(80%);
+  -webkit-backdrop-filter: blur(60px) saturate(80%);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 14px 32px -10px rgba(0,0,0,0.45);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* NUKE INNER WHITE SURFACES */
+.v-overlay__content.glass-surface .v-sheet,
+.v-overlay__content.glass-surface .v-card,
+.v-overlay__content.glass-surface .v-list {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* FORCE WHITE TYPOGRAPHY INSIDE THE MENU */
+.v-overlay__content.glass-surface,
+.v-overlay__content.glass-surface .v-list,
+.v-overlay__content.glass-surface .v-list * {
+  color: #fff !important;                      /* YOUR TEXT COLOR */
+}
+
+/* YOUR CUSTOM ROW — KEEP WHITE + CENTERED */
+.v-overlay__content.glass-surface .menu-row{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  min-height: 32px;
+  line-height: 18px;                           /* lock with icon */
+  color: #fff !important;                      /* belt-and-suspenders */
+}
+
+.v-overlay__content.glass-surface .menu-row .v-icon{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px; height: 18px;
+  font-size: 18px; line-height: 18px;
+  color: #fff !important;                      /* keep icon white */
+}
+
+.v-overlay__content.glass-surface .menu-row span{
+  display: inline-flex;
+  align-items: center;
+  line-height: 18px;
+}
+
+/* HOVER (UNCHANGED LOOK) */
+.v-overlay__content.glass-surface .menu-row.destructive:hover {
+  background: rgba(255,255,255,0.08) !important;
+  border-radius: 8px;
+}
+.v-overlay__content.glass-surface .menu-row {
+  cursor: pointer;               /* show hand */
+}
+.v-overlay__content.glass-surface .menu-row:hover {
+  cursor: pointer;               /* ensure on hover, too */
+}
 </style>

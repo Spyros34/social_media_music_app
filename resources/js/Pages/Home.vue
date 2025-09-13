@@ -99,6 +99,7 @@
         user: { ...p.user, avatar: p.user.avatar || avatarFrom(p.user) }
       }"
       @toggle-like="toggleLike"
+       @delete-post="deletePost"
     />
   </div>
 </div>
@@ -220,6 +221,11 @@ function mountObserver(){
   obs = new IntersectionObserver(whenIntersect, { threshold:[0.85] }) // ← later trigger
   nextTick(()=> document.querySelectorAll('.observer-target').forEach(el=> obs.observe(el)))
 }
+
+function deletePost(id) {
+  router.delete(`/posts/${id}`, { preserveScroll: true })
+}
+
 
 /* initialise + re-initialise when feed changes */
 onMounted(()=> mountObserver())
