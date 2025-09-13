@@ -3,15 +3,19 @@
   <div class="glass-card">
     <!-- avatar / user + timestamp -->
     <v-list-item class="pt-4 pb-5">
-      <template #prepend>
-        <v-avatar size="40">
-          <v-img v-if="post.user?.avatar" :src="post.user.avatar" />
-          <v-icon v-else icon="mdi-account-circle" color="grey-darken-1" size="40" />
-        </v-avatar>
-      </template>
+   <template #prepend>
+  <Link :href="profileHref" class="avatar-link mr-3" @click.stop>
+    <v-avatar size="40">
+      <v-img v-if="post.user?.avatar" :src="post.user.avatar" />
+      <v-icon v-else icon="mdi-account-circle" color="grey-darken-1" size="40" />
+    </v-avatar>
+  </Link>
+</template>
 
       <v-list-item-title class="font-medium">
-        {{ post.user?.name }}
+        <Link :href="profileHref" class="name-link" @click.stop>
+          {{ post.user?.name }}
+        </Link>
       </v-list-item-title>
       <v-list-item-subtitle>{{ timeAgo }}</v-list-item-subtitle>
 
@@ -103,7 +107,7 @@
 
 <script setup>
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
-import { usePage, router } from '@inertiajs/vue3'   // need router to auto-close on nav
+import { usePage, router , Link} from '@inertiajs/vue3'   // need router to auto-close on nav
 
 /* ------------------------------------------------------------------
    Props and emitted events
@@ -130,6 +134,11 @@ const isOwner  = computed(() => {
   const uid = authUser.value?.id
   const pid = props.post.user_id ?? props.post.user?.id
   return uid && pid && uid === pid
+})
+
+const profileHref = computed(() => {
+  const id = props.post?.user?.id
+  return id ? `/u/${id}` : '#'
 })
 
 /* ------------------------------------------------------------------
@@ -413,4 +422,15 @@ onBeforeUnmount(() => {
 .v-overlay__content.glass-surface .menu-row:hover {
   cursor: pointer;               /* ensure on hover, too */
 }
+</style>
+
+<style scoped>
+.avatar-link { display: inline-flex; border-radius: 9999px; }
+.avatar-link:focus-visible { outline: 2px solid rgba(255,255,255,.6); outline-offset: 2px; }
+
+.name-link {
+  text-decoration: none;
+  color: inherit;
+}
+.name-link:hover { text-decoration: underline; text-underline-offset: 2px; }
 </style>
