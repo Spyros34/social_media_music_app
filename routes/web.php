@@ -36,8 +36,8 @@ Route::get('/', [HomeController::class, 'index'])
 
 
 Route::middleware('auth')->group(function(){
-    Route::post('/posts/{post}/comments', [CommentController::class,'store'])->name('comments.store');
-    Route::delete('/comments/{comment}',   [CommentController::class,'destroy'])->name('comments.destroy');
+    // Route::post('/posts/{post}/comments', [CommentController::class,'store'])->name('comments.store');
+    // Route::delete('/comments/{comment}',   [CommentController::class,'destroy'])->name('comments.destroy');
 });
 
 
@@ -55,5 +55,6 @@ Route::middleware('auth')->group(function () {
 
     Route::delete('/posts/{post}', [PostController::class, 'destroy'])
     ->name('posts.destroy');
+    Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 });
 

@@ -1,9 +1,8 @@
-<!-- resources/js/Pages/Profile.vue -->
 <template>
   <DefaultLayout>
     <div class="profile-page min-h-screen">
       <div class="mx-auto px-4 pt-6 max-w-5xl">
-        <!-- Header (centered, no buttons) -->
+        <!-- Header (narrow, centered; all inner content centered) -->
         <v-card rounded="xl" class="profile-hero mb-5">
           <div class="hero-inner">
             <v-avatar size="84" class="hero-avatar">
@@ -11,16 +10,28 @@
               <v-icon v-else icon="mdi-account-circle" color="grey-darken-1" size="84" />
             </v-avatar>
 
-            <div class="hero-text">
-              <div class="hero-name">{{ profile.name }}</div>
-              <div v-if="profile.bio" class="hero-bio">
-                {{ profile.bio }}
-              </div>
-              <div class="hero-stats">
-                <span><strong>{{ postsCount }}</strong> Posts</span>
-                <span class="dot">•</span>
-                <span><strong>{{ likedCount }}</strong> Liked</span>
-              </div>
+            <!-- name + sign out centered on one line -->
+            <div class="hero-toprow">
+              <div class="hero-name truncate">{{ profile.name }}</div>
+              <button
+                v-if="profile.isSelf"
+                class="signout-icon"
+                aria-label="Sign out"
+                title="Sign out"
+                @click="signOutOpen = true"
+              >
+                <v-icon size="18">mdi-logout</v-icon>
+              </button>
+            </div>
+
+            <div v-if="profile.bio" class="hero-bio">
+              {{ profile.bio }}
+            </div>
+
+            <div class="hero-stats">
+              <span><strong>{{ postsCount }}</strong> Posts</span>
+              <span class="dot">•</span>
+              <span><strong>{{ likedCount }}</strong> Liked</span>
             </div>
           </div>
         </v-card>
@@ -52,7 +63,6 @@
               <span v-if="likedCount" class="count">{{ likedCount }}</span>
             </button>
 
-            <!-- animated active pill -->
             <span class="seg-active" :style="segStyle"></span>
           </div>
         </div>
@@ -79,6 +89,19 @@
           </div>
         </v-card>
       </div>
+
+      <!-- Sign out confirm -->
+      <v-dialog v-model="signOutOpen" max-width="420">
+        <v-card>
+          <v-card-title class="text-h6">Sign out?</v-card-title>
+          <v-card-text>Are you sure you want to sign out?</v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn variant="text" @click="signOutOpen = false">Cancel</v-btn>
+            <v-btn color="error" :loading="signingOut" @click="doSignOut">Sign out</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </div>
   </DefaultLayout>
 </template>
@@ -92,15 +115,13 @@ import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 const props = defineProps({
   profile: { type: Object, default: () => null },
   profileUser: { type: Object, default: () => null },
-  posts: { type: Array, default: () => [] },   // user's own posts
-  liked: { type: Array, default: () => [] },   // posts the user liked
+  posts: { type: Array, default: () => [] },
+  liked: { type: Array, default: () => [] },
 })
 
-/* normalize profile */
 const defaultProfile = { id: null, name: 'User', avatar: null, bio: null, isSelf: false }
 const profile = computed(() => ({ ...defaultProfile, ...(props.profile || props.profileUser || {}) }))
 
-/* normalize posts for PostCard */
 function normalize(list) {
   const arr = Array.isArray(list) ? list : []
   return arr.filter(Boolean).map((p, idx) => ({
@@ -114,20 +135,16 @@ function normalize(list) {
 const ownPosts   = computed(() => normalize(props.posts))
 const likedPosts = computed(() => normalize(props.liked))
 
-/* counts */
 const postsCount = computed(() => ownPosts.value.length)
 const likedCount = computed(() => likedPosts.value.length)
 
-/* active tab */
 const tab = ref('posts')
 const visibleList = computed(() => (tab.value === 'posts' ? ownPosts.value : likedPosts.value))
 
-/* like action */
 function toggleLike(id) {
   router.post(`/posts/${id}/like`, {}, { preserveScroll: true })
 }
 
-/* blurred background for each card shell (unchanged) */
 const coverFrom = (post) =>
   post?.track?.coverUrl ||
   post?.track?.album?.images?.[0]?.url ||
@@ -142,51 +159,94 @@ const bgStyle = (post) => {
   return c ? { backgroundImage: `url("${proxied(c)}")` } : {}
 }
 
-/* segmented active pill movement */
 const segStyle = computed(() => ({
   transform: `translateX(${tab.value === 'posts' ? '0%' : '100%'})`,
 }))
 
-/* ── FORCE SOLID WHITE PAGE BG ON THIS ROUTE ───────────────
-   - Disable global body::before/after “dynamic cover” layers
-   - Set the page-bg var to white for anything that reads it
-*/
 onMounted(() => {
   const root = document.documentElement
-  root.classList.add('static-bg')                 // disables global overlays via CSS below
-  root.style.setProperty('--page-bg', '#ffffff')  // just in case something reads this var
+  root.classList.add('static-bg')
+  root.style.setProperty('--page-bg', '#ffffff')
 })
 onBeforeUnmount(() => {
-  const root = document.documentElement
-  root.classList.remove('static-bg')
-  // (optional) don’t reset --page-bg so Home can set it next time it mounts
+  document.documentElement.classList.remove('static-bg')
 })
+
+const signOutOpen = ref(false)
+const signingOut  = ref(false)
+function doSignOut () {
+  signingOut.value = true
+  router.post('/logout', {}, {
+    preserveScroll: true,
+    onFinish: () => {
+      signingOut.value = false
+      signOutOpen.value = false
+    }
+  })
+}
 </script>
 
 <style scoped>
 /* Solid white page background */
-.profile-page {
-  position: relative;
-  background: #ffffff; /* <- one color, no gradient */
-}
+.profile-page { background: #ffffff; }
 
-/* ---------- HERO (no actions) ---------- */
+/* ---------- HERO (narrow, centered; ALL inner elements centered) ---------- */
 .profile-hero{
   background: rgba(255,255,255,.92);
   border: 1px solid rgba(17,24,39,.08);
   box-shadow: 0 8px 26px rgba(16,24,40,.06);
   backdrop-filter: blur(4px);
-  padding: 16px 14px;
+  padding: 18px 16px;
+  width: 100%;
 }
-.hero-inner{ display:flex; align-items:center; gap:14px; }
+@media (min-width: 768px){
+  .profile-hero{ max-width: 560px; margin-inline: auto; } /* smaller + centered */
+}
+
+/* Center stack */
+.hero-inner{
+  display:flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+}
 .hero-avatar{ box-shadow: 0 6px 16px rgba(16,24,40,.10); }
-.hero-text{ display:flex; flex-direction:column; gap:6px; }
-.hero-name{ font-weight: 700; font-size: 20px; color: #0f172a; }
+
+/* name + sign-out centered inline */
+.hero-toprow{
+  display:flex;
+  align-items:center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+}
+.hero-name{
+  font-weight: 700; font-size: 20px; color: #0f172a;
+  max-width: 100%;
+}
+.signout-icon{
+  display:inline-flex; align-items:center; justify-content:center;
+  width: 32px; height: 32px;
+  border-radius: 9999px;
+  border: 1px solid rgba(220,38,38,.55);
+  color: #dc2626;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(220,38,38,.12);
+  transition: transform .08s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
+  flex: 0 0 auto;
+}
+.signout-icon:hover{ background:#dc2626; color:#fff; box-shadow:0 6px 16px rgba(220,38,38,.22); }
+.signout-icon:active{ transform: translateY(1px); }
+
 .hero-bio{ font-size: 13px; color: #374151; line-height: 1.25; }
-.hero-stats{ display:flex; align-items:center; gap:8px; font-size: 12px; color: #4b5563; }
+.hero-stats{
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  font-size: 12px; color: #4b5563;
+}
 .hero-stats .dot{ opacity:.5; }
 
-/* Sticky segmented control */
+/* ---------- Sticky segmented control ---------- */
 .sticky-tabs{ position: sticky; top: 0.25rem; padding: 4px 0; z-index: 20; margin-bottom: 10px; }
 .segmented{
   position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
@@ -215,7 +275,7 @@ onBeforeUnmount(() => {
   transition: transform .22s cubic-bezier(.2,.8,.2,1);
 }
 
-/* Post shells (keep your blur-on-cover effect) */
+/* ---------- Post shells (unchanged) ---------- */
 .card-shell { position: relative; z-index: 0; overflow: hidden; border-radius: 18px; }
 .bg-layer {
   position: absolute; inset: 0; z-index: 0;
@@ -226,5 +286,4 @@ onBeforeUnmount(() => {
 
 /* Vuetify polish */
 .profile-page :deep(.v-divider) { opacity: .6; }
-
 </style>

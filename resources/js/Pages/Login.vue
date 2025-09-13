@@ -75,7 +75,7 @@
         <div>
           <h4 class="feature-title">Vibe Post</h4>
           <p class="feature-desc">
-            Share your favorite tracks—upload a Spotify link, add a caption, and let everyone catch your vibe.
+            Share your vibe—find the track you love, upload it,and let everyone catch your vibe.
           </p>
         </div>
       </div>
@@ -90,15 +90,6 @@
         </div>
       </div>
 
-      <div class="feature-row">
-        <span class="dropcap">C</span>
-        <div>
-          <h4 class="feature-title">Vibe Chat</h4>
-          <p class="feature-desc">
-            Join the conversation—leave comments and connect with fellow music lovers in real time.
-          </p>
-        </div>
-      </div>
     </div>
    
     </div>
@@ -126,30 +117,7 @@ const show = ref(false)
 const carousel = ref(null)
 const isMobile = ref(false)
 
-// your three definitions
-const entries = [
-  {
-    term: 'Vibe Post',
-    pronunciation: '/vaɪb poʊst/',
-    definition:
-      'Share your favorite tracks—upload a Spotify link, add a caption & let everyone catch your vibe.',
-  },
-  {
-    term: 'Vibe Like',
-    pronunciation: '/vaɪb laɪk/',
-    definition:
-      'React to posts you love—tap the heart to show appreciation and spread good vibes.',
-  },
-  {
-    term: 'Vibe Chat',
-    pronunciation: '/vaɪb tʃæt/',
-    definition:
-      'Start a conversation—leave comments, talk about the track, and connect with fellow music lovers.',
-  },
-]
 
-// track flipped state
-const flipped = ref(entries.map(() => false))
 
 
 onMounted(async () => {

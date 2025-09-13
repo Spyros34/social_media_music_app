@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Http\Controllers\Controller;
-use Aerni\Spotify\Facades\Spotify;
 use Inertia\Inertia;
+use Illuminate\Http\Request;
+use Aerni\Spotify\Facades\Spotify;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth; // ← import Auth
 
 class LoginController extends Controller
@@ -37,5 +38,15 @@ class LoginController extends Controller
             'covers'       => $covers,
             'spotifyToken' => optional(Auth::user())->spotify_token,
         ]);
+    }
+
+      public function logout(Request $request)
+    {
+        Auth::logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login'); // or ->to('/')
     }
 }
