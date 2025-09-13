@@ -16,8 +16,8 @@
     <head>
         <meta charset="utf-8">
         <!-- Desktop & Android -->
-        <meta name="theme-color" content="#141416" />
-        <meta name="color-scheme" content="dark light" />
+        <meta name="theme-color" content="white" />
+        <meta name="color-scheme" content="white" />
 
         <!-- iOS Safari (when saved to Home Screen / PWA) -->
         <meta name="apple-mobile-web-app-capable" content="yes" />

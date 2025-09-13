@@ -25,82 +25,131 @@ class ProfileController extends Controller
         return $this->renderProfile($user);
     }
 
-    private function renderProfile(User $profileUser): Response
-    {
-        $viewer = Auth::user();
+    private function renderProfile(User $profileUser): \Inertia\Response
+{
+    /** @var \App\Models\User|null $viewer */
+    $viewer = Auth::user();
 
-        // --- Resolve this user's avatar the same way as Home does (Spotify -> cache) ---
-        $spotifyId = $profileUser->spotify_id;
-        $profileAvatar = $spotifyId
-            ? Cache::remember(
-                "spotify:user:$spotifyId:avatar",
+    // avatar for the profile owner
+    $profileAvatar = $this->resolveAvatarForUser($profileUser);
+
+    /* ---------------- Author's own posts ---------------- */
+    $ownPosts = Post::with('user:id,name,spotify_id')
+        ->withCount('comments')
+        ->where('user_id', $profileUser->id)
+        ->latest()
+        ->get();
+
+    // Liked IDs among the author’s own posts (by the VIEWER)
+    $likedIdsForOwn = $viewer
+        ? $viewer->likedPosts()
+            ->whereIn('post_id', $ownPosts->pluck('id'))
+            ->pluck('post_id')
+            ->all()
+        : [];
+
+    $posts = $ownPosts->map(function (Post $p) use ($profileUser, $profileAvatar, $likedIdsForOwn) {
+        return [
+            'id'        => $p->id,
+            'createdAt' => optional($p->created_at)->toIso8601String(),
+            'track'     => $p->track ?? [],
+            'user'      => [
+                'id'         => $profileUser->id,
+                'name'       => $profileUser->name,
+                'spotify_id' => $profileUser->spotify_id,
+                'avatar'     => $profileAvatar,
+            ],
+            'stats'     => [
+                'likes'    => (int) ($p->likes ?? 0),
+                'liked'    => in_array($p->id, $likedIdsForOwn, true),
+                'comments' => (int) $p->comments_count,
+                'reposts'  => 0,
+                'saved'    => false,
+            ],
+        ];
+    })->values();
+
+    /* ---------------- Posts this profile user LIKED ---------------- */
+    $likedRaw = $profileUser->likedPosts()                 // pivot: user_likes_post
+        ->with('user:id,name,spotify_id')
+        ->withCount('comments')
+        ->orderBy('user_likes_post.created_at', 'desc')
+        ->get();
+
+    // Liked IDs among that liked list (by the VIEWER)
+    $likedIdsForLikedList = $viewer
+        ? $viewer->likedPosts()
+            ->whereIn('post_id', $likedRaw->pluck('id'))
+            ->pluck('post_id')
+            ->all()
+        : [];
+
+    $liked = $likedRaw->map(function (Post $p) use ($likedIdsForLikedList) {
+        $author       = $p->user;
+        $authorAvatar = $this->resolveAvatarForUser($author);
+
+        return [
+            'id'        => $p->id,
+            'createdAt' => optional($p->created_at)->toIso8601String(),
+            'track'     => $p->track ?? [],
+            'user'      => [
+                'id'         => $author->id,
+                'name'       => $author->name,
+                'spotify_id' => $author->spotify_id,
+                'avatar'     => $authorAvatar,
+            ],
+            'stats'     => [
+                'likes'    => (int) ($p->likes ?? 0),
+                // whether the VIEWER has liked this post
+                'liked'    => in_array($p->id, $likedIdsForLikedList, true),
+                'comments' => (int) $p->comments_count,
+                'reposts'  => 0,
+                'saved'    => false,
+            ],
+        ];
+    })->values();
+
+    return \Inertia\Inertia::render('Profile/Show', [
+        'profile' => [
+            'id'         => $profileUser->id,
+            'name'       => $profileUser->name,
+            'spotify_id' => $profileUser->spotify_id,
+            'avatar'     => $profileAvatar,
+            'isSelf'     => (bool) ($viewer?->id === $profileUser->id),
+        ],
+        'posts' => $posts,
+        'liked' => $liked,
+    ]);
+}
+    /** Resolve a user's avatar (Spotify cached → fallback to proxied UI Avatars). */
+    private function resolveAvatarForUser(User $user): ?string
+    {
+        if ($user->spotify_id) {
+            $url = Cache::remember(
+                "spotify:user:{$user->spotify_id}:avatar",
                 now()->addHours(12),
-                function () use ($spotifyId) {
+                function () use ($user) {
                     try {
-                        $profile = Spotify::user($spotifyId)->get(); // public endpoint
+                        $profile = Spotify::user($user->spotify_id)->get();
                         return data_get($profile, 'images.0.url');
                     } catch (\Throwable $e) {
                         Log::warning('Spotify profile fetch failed', [
-                            'spotify_id' => $spotifyId,
+                            'spotify_id' => $user->spotify_id,
                             'msg'        => $e->getMessage(),
                         ]);
                         return null;
                     }
                 }
-            )
-            : null;
-
-        // Fallback avatar (proxied to avoid CORS warnings)
-        if (!$profileAvatar) {
-            $name = $profileUser->name ?: 'User';
-            $ui   = 'https://ui-avatars.com/api/?name=' . urlencode($name) . '&background=1DB954&color=ffffff&bold=true';
-            $profileAvatar = $this->proxyImg($ui, 128, 128);
+            );
+            if ($url) return $url;
         }
 
-        // --- Load this user's posts (authors are always the same user on this page) ---
-        $posts = Post::with('user:id,name,spotify_id')
-            ->withCount('comments')
-            ->where('user_id', $profileUser->id)
-            ->latest()
-            ->get()
-            ->map(function (Post $p) use ($viewer, $profileUser, $profileAvatar) {
-                $t = $p->track ?? [];
-
-                // keep track payload as-is, PostCard already knows how to read it
-                return [
-                    'id'        => $p->id,
-                    'createdAt' => optional($p->created_at)->toIso8601String(),
-                    'track'     => $t,
-                    'user'      => [
-                        'id'         => $profileUser->id,
-                        'name'       => $profileUser->name,
-                        'spotify_id' => $profileUser->spotify_id,
-                        'avatar'     => $profileAvatar,  // <- same logic as Home
-                    ],
-                    'stats'     => [
-                        'likes'    => (int) ($p->likes ?? 0),
-                        'liked'    => $p->isLikedBy($viewer),
-                        'comments' => (int) $p->comments_count,
-                        'reposts'  => 0,
-                        'saved'    => false,
-                    ],
-                ];
-            })
-            ->values();
-
-        return Inertia::render('Profile/Show', [
-            'profile' => [
-                'id'         => $profileUser->id,
-                'name'       => $profileUser->name,
-                'spotify_id' => $profileUser->spotify_id,
-                'avatar'     => $profileAvatar,                 // <- same logic as Home
-                'isSelf'     => $viewer?->id === $profileUser->id,
-            ],
-            'posts' => $posts,
-        ]);
+        $name = $user->name ?: 'User';
+        $ui   = 'https://ui-avatars.com/api/?name=' . urlencode($name) . '&background=1DB954&color=ffffff&bold=true';
+        return $this->proxyImg($ui, 128, 128);
     }
 
-    /** Proxy an image through images.weserv.nl (avoids CORS issues with some hosts). */
+    /** Proxy an image via images.weserv.nl to avoid CORS warnings. */
     private function proxyImg(string $url, int $w = 128, int $h = 128): string
     {
         $naked = preg_replace('#^https?://#i', '', $url);
