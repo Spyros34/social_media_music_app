@@ -145,29 +145,34 @@ function onScrollLikeEvents() {
   // any page movement should close the menu
   closeMenu()
 }
-
+// keep a reference to unsubscribe
+let unbindInertiaStart = null
 onMounted(() => {
-  // Window-level listeners
-  window.addEventListener('scroll', onScrollLikeEvents, { passive: true })
-  window.addEventListener('touchmove', onScrollLikeEvents, { passive: true })
-  window.addEventListener('wheel', onScrollLikeEvents, { passive: true })
-  window.addEventListener('resize', onScrollLikeEvents, { passive: true })
+  // Inertia router: subscribe, keep the unbind fn (if returned)
+  if (typeof router.on === 'function') {
+    const maybeUnbind = router.on('start', closeMenu)
+    if (typeof maybeUnbind === 'function') unbindInertiaStart = maybeUnbind
+  }
 
-  // Inertia navigation
-  router.on('start', closeMenu)
+  // also close on scroll/resize/touch
+  window.addEventListener('scroll', closeMenu, { passive: true })
+  window.addEventListener('touchmove', closeMenu, { passive: true })
+  window.addEventListener('wheel', closeMenu, { passive: true })
+  window.addEventListener('resize', closeMenu, { passive: true })
 
-  // Tab visibility changes
-  document.addEventListener('visibilitychange', closeMenu, { passive: true })
+  // fallback for older adapters: DOM event
+  document.addEventListener('inertia:start', closeMenu)
 })
-
 onBeforeUnmount(() => {
-  window.removeEventListener('scroll', onScrollLikeEvents)
-  window.removeEventListener('touchmove', onScrollLikeEvents)
-  window.removeEventListener('wheel', onScrollLikeEvents)
-  window.removeEventListener('resize', onScrollLikeEvents)
+  // unsubscribe if we got a function back
+  unbindInertiaStart?.()
 
-  router.off('start', closeMenu)
-  document.removeEventListener('visibilitychange', closeMenu)
+  window.removeEventListener('scroll', closeMenu)
+  window.removeEventListener('touchmove', closeMenu)
+  window.removeEventListener('wheel', closeMenu)
+  window.removeEventListener('resize', closeMenu)
+
+  document.removeEventListener('inertia:start', closeMenu)
 })
 
 /* ------------------------------------------------------------------

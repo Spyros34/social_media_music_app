@@ -7,8 +7,10 @@
       <div class="create-section mb-6 border-l-4 pl-4" style="border-color: #1DB954">
         <!-- Search bar -->
         <v-autocomplete 
+          ref="songSearch"
           v-model="selectedItem"
           v-model:search="query"
+          v-model:menu="searchMenu"
           :items="results"
           :loading="searching"       
           item-title="display"
@@ -87,28 +89,27 @@
 
       <!-- FEED -->
       <div class="space-y-6 pb-16">
+  <!-- FEED -->
+<div class="space-y-6 pb-16">
   <div
-    v-for="p in posts"
+    v-for="p in feed"
     :key="p.id"
-    class="observer-target"      
+    class="observer-target"
     :data-post-id="p.id"
   >
     <PostCard
-      :post="{
-        ...p,
-        user: { ...p.user, avatar: p.user.avatar || avatarFrom(p.user) }
-      }"
+      :post="{ ...p, user: { ...p.user, avatar: p.user.avatar || avatarFrom(p.user) } }"
       @toggle-like="toggleLike"
-       @delete-post="deletePost"
+      @delete-post="deletePost"
     />
   </div>
+</div>
 </div>
 </div>
   </DefaultLayout>
 </template>
 
 <script setup>
-/* ───────── Imports ───────── */
 import DefaultLayout    from '@/Layouts/DefaultLayout.vue'
 import PostCard         from '@/Components/PostCard.vue'
 import { useForm, router } from '@inertiajs/vue3'
@@ -117,12 +118,24 @@ import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 /* ───────── Props ───────── */
 const props = defineProps({ posts: { type: Array, default: () => [] } })
 
-/* ───────── 1.  Search & “create-post” logic (unchanged) ───────── */
+/* ───────── Search & create-post ───────── */
+const songSearch   = ref(null)     // ref to <v-autocomplete>
+const searchMenu   = ref(false)    // controls the dropdown menu (bind with v-model:menu)
 const query        = ref('')
 const selectedItem = ref(null)
 const results      = ref([])
 const searching    = ref(false)
 let   timer        = null
+
+const emptyTrack = Object.freeze({
+  id:'', title:'', artist:'', coverUrl:'', previewUrl:'', externalUrl:'', durationMs:null
+})
+
+const form = useForm({ track: { ...emptyTrack } })
+const hasTrack = computed(() => !!form.track.id)
+// after props
+const feed = ref([...props.posts])
+watch(() => props.posts, v => { feed.value = [...v] }, { deep: true })
 
 async function runSearch (q){
   searching.value = true
@@ -132,77 +145,135 @@ async function runSearch (q){
     results.value = (d.items ?? []).map(t => ({ ...t, display:`${t.title} — ${t.artist}` }))
   }finally{ searching.value = false }
 }
+
+
+
 function onSearchUpdate (v) {
   clearTimeout(timer)
   query.value = v
-
-  // If user clears the field (typing backspace or clicking ✕),
-  // also clear the selected item and the post preview.
   if (!v || v.trim().length < 2) {
     results.value = []
     selectedItem.value = null
-    form.track = {
-      id: '',
-      title: '',
-      artist: '',
-      coverUrl: '',
-      previewUrl: '',
-      externalUrl: '',
-      durationMs: null,
-    }
+    Object.assign(form.track, emptyTrack)  // mutate, don’t replace
     return
   }
-
   timer = setTimeout(() => runSearch(v.trim()), 250)
 }
 
-const form     = useForm({ track:{ id:'',title:'',artist:'',coverUrl:'',previewUrl:'',externalUrl:'',durationMs:null }})
-const hasTrack = computed(() => !!form.track.id)
 function onSelect(i){
-  if (!i) {               // X clicked or selection cleared
-    clearSelection()
-    return
-  }
-  form.track = { ...i }   // normal select
+  if (!i) { clearSelection(); return }
+  // mutate existing object for reactivity
+  Object.assign(form.track, {
+    id: i.id, title: i.title, artist: i.artist,
+    coverUrl: i.coverUrl, previewUrl: i.previewUrl,
+    externalUrl: i.externalUrl, durationMs: i.durationMs ?? null
+  })
 }
-function submit (){ hasTrack.value && form.post('/posts',{ preserveScroll:true }) }
 
+/* Clear selection, close menu, blur input */
 function clearSelection(){
   selectedItem.value = null
-  query.value = ''
-  form.track = { ...form.defaults().track }
+  query.value        = ''
+  results.value      = []
+  searchMenu.value   = false
+
+  Object.assign(form.track, emptyTrack)  // <- key change
+
+  nextTick(() => {
+    // close menu + blur underlying input
+    searchMenu.value = false
+    const input = songSearch.value?.$el?.querySelector('input')
+    input?.blur?.()
+  })
 }
 
-onBeforeUnmount(()=> clearTimeout(timer))
+function submit () {
+  if (!hasTrack.value) return
 
+  // snapshot the data to send
+  const backup  = { ...form.track }
+  const payload = { track: backup }
+
+  router.post('/posts', payload, {
+    preserveScroll: true,
+
+    // clear UI immediately, without touching the request payload
+    onStart: () => {
+      selectedItem.value = null
+      query.value        = ''
+      results.value      = []
+      searchMenu.value   = false
+      Object.assign(form.track, emptyTrack)
+      nextTick(() => songSearch.value?.$el?.querySelector('input')?.blur?.())
+    },
+
+    // if server rejects, restore the selection so user can retry
+    onError: () => {
+      Object.assign(form.track, backup)
+      selectedItem.value = { ...backup, display: `${backup.title} — ${backup.artist}` }
+      searchMenu.value   = false
+    },
+
+    onFinish: () => {
+      results.value    = []
+      searchMenu.value = false
+    }
+  })
+}
+
+/* Likes / delete */
+function toggleLike(id){
+  router.post(`/posts/${id}/like`, {}, { preserveScroll:true })
+}
+// lock map to avoid duplicate deletes
+const deletingIds = new Set()
+
+function deletePost(id) {
+  const key = String(id)
+  if (deletingIds.has(key)) return         // already deleting this one
+  deletingIds.add(key)
+
+  router.delete(`/posts/${key}`, {
+    preserveScroll: true,
+    preserveState : true,
+    replace       : true,
+
+    // remove from UI *after* server confirms
+    onSuccess: () => {
+      const idx = feed.value.findIndex(p => String(p.id) === key)
+      if (idx !== -1) feed.value.splice(idx, 1)
+    },
+
+    onError: () => {
+      // nothing to rollback (we didn't optimistically remove)
+      // optional: show a toast here
+    },
+
+    onFinish: () => {
+      deletingIds.delete(key)
+    },
+  })
+}
+/* Avatar fallback */
 function avatarFrom(u){
   const n = u?.name || 'Vibe Wave'
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(n)}&background=1DB954&color=fff`
 }
-function toggleLike(id){
-  router.post(`/posts/${id}/like`, {}, { preserveScroll:true })
-}
 
-/* ───────── 2.  Blurred-cover page background ───────── */
-
-/* proxy helper → returns CORS-safe, down-scaled image */
+/* ───────── Blurred-cover page background ───────── */
 const proxied = url =>
   `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//,''))}&w=600&h=600`
 
-let activeCover = ''          // last cover URL applied
+let activeCover = ''
 function setPageBackground(url){
   if(!url || url === activeCover) return
   activeCover = url
-
   const root = document.documentElement
-  root.classList.add('is-fading')                                  // start fade
-  root.style.setProperty('--page-bg', `url("${proxied(url)}")`)    // place new img
-
-  /* remove helper class after transition (must match CSS 2.8 s) */
+  root.classList.add('is-fading')
+  root.style.setProperty('--page-bg', `url("${proxied(url)}")`)
   setTimeout(()=> root.classList.remove('is-fading'), 2800)
 }
 
-/* IntersectionObserver – wait until 85 % of a post is visible */
 let obs = null, activeId = null
 function whenIntersect(entries){
   const best = entries.filter(e=>e.isIntersecting)
@@ -212,24 +283,28 @@ function whenIntersect(entries){
   if(!pid || pid === activeId) return
   activeId = pid
 
-  const post = props.posts.find(p => String(p.id) === pid)
+  const post = feed.value.find(p => String(p.id) === String(pid))  // <- feed
   setPageBackground(post?.track?.coverUrl ?? null)
 }
 
 function mountObserver(){
   obs?.disconnect()
-  obs = new IntersectionObserver(whenIntersect, { threshold:[0.85] }) // ← later trigger
+  obs = new IntersectionObserver(whenIntersect, { threshold:[0.85] })
   nextTick(()=> document.querySelectorAll('.observer-target').forEach(el=> obs.observe(el)))
 }
 
-function deletePost(id) {
-  router.delete(`/posts/${id}`, { preserveScroll: true })
-}
-
-
-/* initialise + re-initialise when feed changes */
+/* Lifecycle */
 onMounted(()=> mountObserver())
-watch(()=> props.posts.length, () => setTimeout(mountObserver, 80))
+
+watch(() => feed.value.length, () => {
+  setTimeout(mountObserver, 80)
+})
+onBeforeUnmount(()=>{
+  clearTimeout(timer)
+  obs?.disconnect()
+})
+
+defineExpose({ submit, clearSelection })
 </script>
 <style scoped>
 
