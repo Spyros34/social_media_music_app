@@ -106,7 +106,7 @@
   </div>
 </div>
 
-<div
+<div v-else
   class="mx-auto mt-10 max-w-md rounded-2xl border border-white/15
          bg-white/10 backdrop-blur-md shadow-xl p-8 text-center"
 >

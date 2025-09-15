@@ -11,7 +11,7 @@
       </main>
 
     <footer class="p-4 bg-gray text-center">
-      © {{ new Date().getFullYear() }} MyApp
+      © {{ new Date().getFullYear() }} VibeWave
     </footer>
   </div>
 </template>
