@@ -21,15 +21,18 @@ class SpotifyController extends Controller
     /**
      * Redirect the user to Spotify's authorization page.
      */
-    public function redirectToProvider()
-    {
-        /** @var SpotifyProvider $provider */
-        $provider = Socialite::driver('spotify');
-        
-        return $provider
-            ->scopes(['user-read-email'])  // runtime-valid, IDE-hinted above
-            ->redirect();
-    }
+ public function redirectToProvider()
+{
+    $callback = route('login.spotify.callback');
+
+    /** @var \SocialiteProviders\Spotify\Provider|\Laravel\Socialite\Two\AbstractProvider $provider */
+    $provider = Socialite::driver('spotify');
+
+    return $provider
+        ->redirectUrl($callback)     // set exact callback URL
+        ->scopes(['user-read-email'])// set scopes (method exists on AbstractProvider)
+        ->redirect();
+}
 
    public function searchTracks(Request $request): JsonResponse
 {

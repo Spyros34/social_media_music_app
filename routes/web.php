@@ -25,8 +25,11 @@ Route::get('/login', [LoginController::class, 'show'])->name('login')
     ->middleware('guest');
 
 Route::middleware('web')->group(function () {
-    Route::get('login/spotify', [SpotifyController::class, 'redirectToProvider'])->name('login.spotify');;
-    Route::get('login/spotify/callback', [SpotifyController::class, 'handleProviderCallback']);
+    Route::get('login/spotify', [SpotifyController::class, 'redirectToProvider'])
+        ->name('login.spotify');
+
+    Route::get('login/spotify/callback', [SpotifyController::class, 'handleProviderCallback'])
+        ->name('login.spotify.callback'); // NAME IT!
 });
 
 // 3) Home page — only authenticated users:
