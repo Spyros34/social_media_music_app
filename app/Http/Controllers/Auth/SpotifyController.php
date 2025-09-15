@@ -21,16 +21,15 @@ class SpotifyController extends Controller
     /**
      * Redirect the user to Spotify's authorization page.
      */
-   public function redirectToProvider()
-{
-    /** @var \SocialiteProviders\Spotify\Provider $provider */
-    $provider = Socialite::driver('spotify');
-
-    return $provider
-        ->scopes(['user-read-email'])
-        ->with(['show_dialog' => 'true']) // <- force re-prompt
-        ->redirect();
-}
+    public function redirectToProvider()
+    {
+        /** @var SpotifyProvider $provider */
+        $provider = Socialite::driver('spotify');
+        
+        return $provider
+            ->scopes(['user-read-email'])  // runtime-valid, IDE-hinted above
+            ->redirect();
+    }
 
    public function searchTracks(Request $request): JsonResponse
 {
