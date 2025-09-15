@@ -8,6 +8,7 @@ use Aerni\Spotify\Facades\Spotify;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth; // ← import Auth
+use Illuminate\Support\Facades\Cookie;
 
 class LoginController extends Controller
 {
@@ -40,13 +41,16 @@ class LoginController extends Controller
         ]);
     }
 
-      public function logout(Request $request)
-    {
-        Auth::logout();
+public function logout(Request $request)
+{
+    // log out the current guard (defaults to 'web' unless you changed it)
+    Auth::guard()->logout();
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+    // fully invalidate the session & rotate CSRF token
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
 
-        return redirect()->route('login'); // or ->to('/')
-    }
+    // send them to login
+    return redirect()->route('login');
+}
 }

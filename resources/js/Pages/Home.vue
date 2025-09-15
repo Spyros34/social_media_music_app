@@ -90,7 +90,8 @@
       <!-- FEED -->
       <div class="space-y-6 pb-16">
   <!-- FEED -->
-<div class="space-y-6 pb-16">
+<!-- FEED -->
+<div class="space-y-6 pb-16" v-if="feed.length">
   <div
     v-for="p in feed"
     :key="p.id"
@@ -104,7 +105,45 @@
     />
   </div>
 </div>
+
+<div
+  class="mx-auto mt-10 max-w-md rounded-2xl border border-white/15
+         bg-white/10 backdrop-blur-md shadow-xl p-8 text-center"
+>
+  <!-- Icon badge -->
+  <div class="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-full bg-emerald-500/18">
+    <!-- Simple note icon (crisp on dark) -->
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+         class="h-7 w-7 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 18V6l10-2v10" />
+      <circle cx="7" cy="18" r="3" />
+      <circle cx="17" cy="14" r="3" />
+    </svg>
+  </div>
+
+  <h2 class="text-lg font-semibold text-white/95">It’s quiet in here 👀</h2>
+  <p class="mt-2 text-[15px] leading-relaxed text-white/80">
+    Be the first to set the vibe—pick a track and share your thoughts.
+  </p>
+
+  <div class="mt-6 flex flex-col gap-3">
+    <button
+      type="button"
+      @click="focusSearch"
+      class="inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-medium
+             bg-emerald-400 text-emerald-950 hover:bg-emerald-300 active:translate-y-px transition"
+    >
+      Search a song
+    </button>
+  </div>
+
+  <div class="mt-6 text-xs text-white/70">
+    Tip: You can like posts after sharing your first track.
+  </div>
 </div>
+
+</div>
+
 </div>
   </DefaultLayout>
 </template>
@@ -146,7 +185,26 @@ async function runSearch (q){
   }finally{ searching.value = false }
 }
 
+function focusSearch() {
+  // Vuetify v-autocomplete → grab the inner input and focus it
+  const input = songSearch.value?.$el?.querySelector('input')
+  input?.focus?.()
+}
 
+function scrollToCreate() {
+  const el = document.getElementById('create-post') || songSearch.value?.$el
+  el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  // focus after scroll
+  setTimeout(() => focusSearch(), 250)
+}
+
+/* ───────── Clear page background when no posts ───────── */
+function clearBackground(){
+  const root = document.documentElement
+  root.classList.remove('is-fading')
+  root.style.removeProperty('--page-bg') // falls back to your CSS default
+  activeCover = ''                        // reset guard
+}
 
 function onSearchUpdate (v) {
   clearTimeout(timer)
@@ -294,14 +352,22 @@ function mountObserver(){
 }
 
 /* Lifecycle */
-onMounted(()=> mountObserver())
-
-watch(() => feed.value.length, () => {
-  setTimeout(mountObserver, 80)
+onMounted(() => {
+  if (feed.value.length === 0) {
+    clearBackground()
+    return // no observer when nothing to observe
+  }
+  mountObserver()
 })
-onBeforeUnmount(()=>{
-  clearTimeout(timer)
-  obs?.disconnect()
+
+watch(() => feed.value.length, (len) => {
+  if (len === 0) {
+    clearBackground()
+    obs?.disconnect()
+  } else {
+    // (re)attach observer when posts appear
+    setTimeout(mountObserver, 80)
+  }
 })
 
 defineExpose({ submit, clearSelection })
@@ -372,22 +438,28 @@ defineExpose({ submit, clearSelection })
 .pb-16 { padding-bottom: 4rem; }
 </style>
 <style>
-/* the two stacked layers stay the same – we simply slow the fade */
+/* Softer blurred cover + subtle vignette */
+/* Softer, lighter background when no post cover is active */
 body::before,
 body::after{
   content:'';
   position:fixed;
   inset:0;
   z-index:-1;
-  background:var(--page-bg,#f5f5f5) center/cover no-repeat;
-  filter:blur(40px) brightness(.7);
-  transform:scale(1.1);
-  transition:opacity 1.2s cubic-bezier(.4,0,.2,1); /* ⬅︎ slower & silkier */
+
+  /* gentler vignette + neutral base */
+  background:
+    radial-gradient(120% 80% at 50% 10%, rgba(0,0,0,.04), rgba(0,0,0,.14)),
+    var(--page-bg, #171a1a) center/cover no-repeat;
+
+  /* brighter than before */
+  filter: blur(34px) brightness(.82) contrast(1.02) saturate(1.04);
+  transform: scale(1.06);
+  transition: opacity 1.0s cubic-bezier(.4,0,.2,1);
 }
 
 body::before{ opacity:1 }
 body::after { opacity:0 }
-
 body.is-fading::before{ opacity:0 }
 body.is-fading::after { opacity:1 }
 </style>
