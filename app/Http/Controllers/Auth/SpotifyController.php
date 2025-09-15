@@ -29,8 +29,9 @@ class SpotifyController extends Controller
     $provider = Socialite::driver('spotify');
 
     return $provider
-        ->redirectUrl($callback)     // set exact callback URL
-        ->scopes(['user-read-email'])// set scopes (method exists on AbstractProvider)
+        ->redirectUrl($callback)
+        ->scopes(['user-read-email'])
+        ->with(['show_dialog' => 'true']) // <-- SHOW CONSENT EVEN IF PREVIOUSLY APPROVED
         ->redirect();
 }
 
@@ -114,7 +115,14 @@ class SpotifyController extends Controller
         );
 
         // 4) Log them in
-        Auth::login($user, true);
+       // Auth::login($user, true);
+        Auth::guard('web')->login($user, true);
+        $request->session()->regenerate(); // IMPORTANT
+        Log::info('OAUTH LOGIN DONE', [
+            'auth_check' => Auth::check(),
+            'user_id'    => Auth::id(),
+            'guard'      => 'web',
+        ]);
 
         return redirect()->route('home');
     }
